@@ -4,13 +4,18 @@ mod modes;
 mod padding;
 
 pub use {
-    modes::{Cbc, Ecb},
+    modes::{BlockMode, Cbc, Ecb},
     padding::{Padding, Pkcs7},
 };
 
 pub trait BlockCipher {
-    type Block;
+    // TODO Document the requirements for this type
+    type Block: 'static
+        + for<'a> TryFrom<&'a [u8], Error = std::array::TryFromSliceError>
+        + AsRef<[u8]>
+        + Clone
+        + Copy;
 
-    fn encrypt(p: Plaintext<Self::Block>) -> Ciphertext<Self::Block>;
-    fn decrypt(c: Ciphertext<Self::Block>) -> Plaintext<Self::Block>;
+    fn encrypt(data: Plaintext<Self::Block>) -> Ciphertext<Self::Block>;
+    fn decrypt(data: Ciphertext<Self::Block>) -> Plaintext<Self::Block>;
 }

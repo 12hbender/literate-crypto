@@ -4,7 +4,7 @@ use {
 };
 
 // TODO Include some examples for what this would look like?
-/// PKCS #7 is a simple approach to padding.
+/// PKCS #7, a simple approach to padding.
 ///
 /// If the message needs to be padded with $n$ bytes and the block size is $B$,
 /// this padding scheme will append $n$ bytes with the value $n$. If $n = 0$,
