@@ -9,8 +9,8 @@ pub use {
 };
 
 pub trait BlockCipher {
-    const BLOCK_SIZE: usize;
+    type Block;
 
-    fn encrypt(p: Plaintext<&[u8]>) -> Ciphertext<Vec<u8>>;
-    fn decrypt(c: Ciphertext<&[u8]>) -> Plaintext<Vec<u8>>;
+    fn encrypt(p: Plaintext<Self::Block>) -> Ciphertext<Self::Block>;
+    fn decrypt(c: Ciphertext<Self::Block>) -> Plaintext<Self::Block>;
 }

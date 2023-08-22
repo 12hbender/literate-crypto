@@ -1,17 +1,22 @@
-use crate::{
-    cipher::{block::BlockCipher, Cipher},
-    Ciphertext,
-    Plaintext,
+use {
+    crate::{BlockCipher, Cipher, Ciphertext, Padding, Plaintext},
+    std::marker::PhantomData,
 };
 
-pub struct Ecb<C>(C);
+#[derive(Debug, Default)]
+pub struct Ecb<Cip, Pad> {
+    _cipher: PhantomData<Cip>,
+    _padding: PhantomData<Pad>,
+}
 
-impl<C: BlockCipher> Cipher for Ecb<C> {
-    fn encrypt(&self, p: Plaintext<&[u8]>) -> Ciphertext<Vec<u8>> {
+impl<Cip: BlockCipher, Pad: Padding> Cipher for Ecb<Cip, Pad> {
+    type Err = Pad::Err;
+
+    fn encrypt(&mut self, p: Plaintext<&[u8]>) -> Ciphertext<Vec<u8>> {
         todo!()
     }
 
-    fn decrypt(&self, c: Ciphertext<&[u8]>) -> Plaintext<Vec<u8>> {
+    fn decrypt(&mut self, c: Ciphertext<&[u8]>) -> Result<Plaintext<Vec<u8>>, Self::Err> {
         todo!()
     }
 }
