@@ -37,12 +37,28 @@ where
     }
 }
 
+impl<T> Ciphertext<T>
+where
+    T: AsRef<[u8]>,
+{
+    pub fn as_ref(&self) -> Ciphertext<&[u8]> {
+        Ciphertext(self.0.as_ref())
+    }
+}
+
 impl Plaintext<&[u8]> {
     pub fn to_vec(&self) -> Plaintext<Vec<u8>> {
         Plaintext(self.0.to_vec())
     }
 }
 
+impl Ciphertext<&[u8]> {
+    pub fn to_vec(&self) -> Ciphertext<Vec<u8>> {
+        Ciphertext(self.0.to_vec())
+    }
+}
+
+/// A fixed-size byte array.
 pub trait Bytes:
     'static
     + for<'a> TryFrom<&'a [u8], Error = std::array::TryFromSliceError>
@@ -50,6 +66,7 @@ pub trait Bytes:
     + Clone
     + Copy
     + Sized
+    + std::fmt::Debug
 {
 }
 

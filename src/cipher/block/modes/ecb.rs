@@ -13,7 +13,7 @@ use {
 /// YES/NO messages from a client. If an attacker can see the encrypted
 /// messages, he will know when the client is sending two identical messages. If
 /// the attacker can perform some context-dependent analysis of the messages, he
-/// might even be able to guess which messages are being (YES or NO).
+/// might even be able to guess which messages are being sent (YES or NO).
 #[derive(Debug, Default)]
 pub struct Ecb<Cip, Pad>(PhantomData<Cip>, PhantomData<Pad>);
 

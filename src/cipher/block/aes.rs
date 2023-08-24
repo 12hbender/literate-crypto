@@ -1,5 +1,9 @@
 use crate::{BlockCipher, Ciphertext, Key, Plaintext};
 
+// TODO Needs a high-level explanation of how AES works, what S-boxes are, what
+// is confusion and diffusion, and how it is achieved in AES. And an explanation
+// of what the times_ functions are doing.
+
 /// AES word size in bytes.
 const WORD_SIZE: usize = 4;
 
@@ -66,6 +70,7 @@ const AES256_BLOCK_BYTES: usize = NB * WORD_SIZE;
 const AES256_KEY_BYTES: usize = AES256_NK * WORD_SIZE;
 const AES256_EXPANSION_BYTES: usize = NB * (AES256_NR + 1) * WORD_SIZE;
 
+/// AES block cipher with 128-bit keys.
 pub struct Aes128;
 
 impl BlockCipher for Aes128 {
@@ -85,6 +90,7 @@ impl BlockCipher for Aes128 {
     }
 }
 
+/// AES block cipher with 192-bit keys.
 pub struct Aes192;
 
 impl BlockCipher for Aes192 {
@@ -104,6 +110,7 @@ impl BlockCipher for Aes192 {
     }
 }
 
+/// AES block cipher with 256-bit keys.
 pub struct Aes256;
 
 impl BlockCipher for Aes256 {
@@ -124,11 +131,11 @@ impl BlockCipher for Aes256 {
 }
 
 fn encrypt<
-    const NK: usize,
-    const NR: usize,
-    const BLOCK_BYTES: usize,     // NB * WORD_SIZE
-    const KEY_BYTES: usize,       // NK * WORD_SIZE
-    const EXPANSION_BYTES: usize, // NB * (NR + 1) * WORD_SIZE
+    const NK: usize,              // Key size in words.
+    const NR: usize,              // Number of rounds.
+    const BLOCK_BYTES: usize,     // NB * WORD_SIZE.
+    const KEY_BYTES: usize,       // NK * WORD_SIZE.
+    const EXPANSION_BYTES: usize, // NB * (NR + 1) * WORD_SIZE.
 >(
     data: Plaintext<[u8; BLOCK_BYTES]>,
     key: Key<[u8; KEY_BYTES]>,
@@ -152,11 +159,11 @@ fn encrypt<
 }
 
 fn decrypt<
-    const NK: usize,
-    const NR: usize,
-    const BLOCK_BYTES: usize,     // NB * WORD_SIZE
-    const KEY_BYTES: usize,       // NK * WORD_SIZE
-    const EXPANSION_BYTES: usize, // NB * (NR + 1) * WORD_SIZE
+    const NK: usize,              // Key size in words.
+    const NR: usize,              // Number of rounds.
+    const BLOCK_BYTES: usize,     // NB * WORD_SIZE.
+    const KEY_BYTES: usize,       // NK * WORD_SIZE.
+    const EXPANSION_BYTES: usize, // NB * (NR + 1) * WORD_SIZE.
 >(
     data: Ciphertext<[u8; BLOCK_BYTES]>,
     key: Key<[u8; KEY_BYTES]>,
