@@ -4,14 +4,15 @@ use {
 };
 
 #[test]
-pub fn pkcs7() {
+fn pkcs7() {
     test::<Pkcs7>(16, 13);
     test::<Pkcs7>(16, 16);
     test::<Pkcs7>(16, 17);
     test::<Pkcs7>(16, 18);
 }
 
-pub fn test<Pad: Padding>(n: usize, data: usize)
+// TODO The error messages have to be good
+fn test<Pad: Padding>(n: usize, data: usize)
 where
     Pad::Err: std::fmt::Debug,
 {

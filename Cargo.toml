@@ -8,5 +8,7 @@ license = "Unlicense"
 
 [dependencies]
 docext = "0.0.3"
-rand = "0.8.5"
 thiserror = "1.0.47"
+
+[dev-dependencies]
+rand = "0.8.5"

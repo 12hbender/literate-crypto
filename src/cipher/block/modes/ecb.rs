@@ -1,5 +1,5 @@
 use {
-    crate::{BlockCipher, BlockMode, Cipher, Ciphertext, Padding, Plaintext},
+    crate::{BlockCipher, BlockMode, Cipher, Ciphertext, Key, Padding, Plaintext},
     std::marker::PhantomData,
 };
 
@@ -19,24 +19,28 @@ pub struct Ecb<Cip, Pad>(PhantomData<Cip>, PhantomData<Pad>);
 
 impl<Cip: BlockCipher, Pad: Padding> Cipher for Ecb<Cip, Pad> {
     type Err = Pad::Err;
+    type Key = Cip::Key;
 
-    fn encrypt(data: Plaintext<&[u8]>) -> Ciphertext<Vec<u8>> {
+    fn encrypt(data: Plaintext<&[u8]>, key: Key<Self::Key>) -> Ciphertext<Vec<u8>> {
         let mut result = Vec::new();
         let n = std::mem::size_of::<Cip::Block>();
         let data = Pad::pad(data, n);
         let data = data.as_ref();
         for block in data.0.chunks(n) {
-            let block = Cip::encrypt(Plaintext(block.try_into().unwrap()));
+            let block = Cip::encrypt(Plaintext(block.try_into().unwrap()), key);
             result.extend_from_slice(block.0.as_ref());
         }
         Ciphertext(result)
     }
 
-    fn decrypt(data: Ciphertext<&[u8]>) -> Result<Plaintext<Vec<u8>>, Self::Err> {
+    fn decrypt(
+        data: Ciphertext<&[u8]>,
+        key: Key<Self::Key>,
+    ) -> Result<Plaintext<Vec<u8>>, Self::Err> {
         let mut result = Vec::new();
         let n = std::mem::size_of::<Cip::Block>();
         for block in data.0.chunks(n) {
-            let block = Cip::decrypt(Ciphertext(block.try_into().unwrap()));
+            let block = Cip::decrypt(Ciphertext(block.try_into().unwrap()), key);
             result.extend_from_slice(block.0.as_ref());
         }
         Pad::unpad(Plaintext(&result), n)
