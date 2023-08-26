@@ -1,6 +1,9 @@
 #[cfg(test)]
 mod test;
 
+#[cfg(doc)]
+pub mod doc;
+
 mod cipher;
 
 pub use cipher::{

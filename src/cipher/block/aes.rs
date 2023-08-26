@@ -1,15 +1,12 @@
 use crate::{BlockCipher, Ciphertext, Key, Plaintext};
 
-// TODO Needs a high-level explanation of how AES works, what S-boxes are, what
-// is confusion and diffusion, and how it is achieved in AES. And an explanation
-// of what the times_ functions are doing.
-
 /// AES word size in bytes.
 const WORD_SIZE: usize = 4;
 
 /// AES block size in words.
 const NB: usize = 4;
 
+/// The substitution table.
 const S_BOX: [u8; 256] = [
     0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5, 0x30, 0x01, 0x67, 0x2b, 0xfe, 0xd7, 0xab, 0x76,
     0xca, 0x82, 0xc9, 0x7d, 0xfa, 0x59, 0x47, 0xf0, 0xad, 0xd4, 0xa2, 0xaf, 0x9c, 0xa4, 0x72, 0xc0,
@@ -29,6 +26,7 @@ const S_BOX: [u8; 256] = [
     0x8c, 0xa1, 0x89, 0x0d, 0xbf, 0xe6, 0x42, 0x68, 0x41, 0x99, 0x2d, 0x0f, 0xb0, 0x54, 0xbb, 0x16,
 ];
 
+/// Inverse substitution table.
 const INV_S_BOX: [u8; 256] = [
     0x52, 0x09, 0x6a, 0xd5, 0x30, 0x36, 0xa5, 0x38, 0xbf, 0x40, 0xa3, 0x9e, 0x81, 0xf3, 0xd7, 0xfb,
     0x7c, 0xe3, 0x39, 0x82, 0x9b, 0x2f, 0xff, 0x87, 0x34, 0x8e, 0x43, 0x44, 0xc4, 0xde, 0xe9, 0xcb,
@@ -70,7 +68,7 @@ const AES256_BLOCK_BYTES: usize = NB * WORD_SIZE;
 const AES256_KEY_BYTES: usize = AES256_NK * WORD_SIZE;
 const AES256_EXPANSION_BYTES: usize = NB * (AES256_NR + 1) * WORD_SIZE;
 
-/// AES block cipher with 128-bit keys.
+/// [AES block cipher](crate::doc::aes) with 128-bit keys.
 pub struct Aes128;
 
 impl BlockCipher for Aes128 {
@@ -90,7 +88,7 @@ impl BlockCipher for Aes128 {
     }
 }
 
-/// AES block cipher with 192-bit keys.
+/// [AES block cipher](crate::doc::aes) with 192-bit keys.
 pub struct Aes192;
 
 impl BlockCipher for Aes192 {
@@ -110,7 +108,7 @@ impl BlockCipher for Aes192 {
     }
 }
 
-/// AES block cipher with 256-bit keys.
+/// [AES block cipher](crate::doc::aes) with 256-bit keys.
 pub struct Aes256;
 
 impl BlockCipher for Aes256 {
@@ -259,39 +257,58 @@ fn inv_mix_columns<const BLOCK_BYTES: usize>(state: &mut [u8; BLOCK_BYTES]) {
     });
 }
 
+/// Multiply `b` by 0x02 in the Galois field GF(2^8).
 fn times_02(b: u8) -> u8 {
+    // As the FIP explains, this is implemented via a bit shift and conditional XOR
+    // with 0x1b if the high bit is set.
     let mut r = b << 1;
+    // The high bit will be set in the shifted bitset if the high bit was set
+    // in the original bitset before the shift.
     if b & 0x80 != 0 {
         r ^= 0x1b;
     }
     r
 }
 
+/// Multiply `b` by 0x03 in the Galois field GF(2^8).
 fn times_03(b: u8) -> u8 {
+    // In GF(2^8), 0x03 = 0x01 ^ 0x02, multiplication is distributive, and
+    // multiplying by 0x01 is a no-op. Therefore, multiplying b by 0x03 is the
+    // same as multiplying b by 0x02 and then XORing the result with b.
     times_02(b) ^ b
 }
 
+/// Multiplication by 0x04 in the Galois field GF(2^8).
 fn times_04(b: u8) -> u8 {
     times_02(times_02(b))
 }
 
+/// Multiplication by 0x08 in the Galois field GF(2^8).
 fn times_08(b: u8) -> u8 {
     times_02(times_04(b))
 }
 
+/// Multiplication by 0x09 in the Galois field GF(2^8).
 fn times_09(b: u8) -> u8 {
+    // Similar logic applies here as to times_03.
     times_08(b) ^ b
 }
 
+/// Multiplication by 0x0b in the Galois field GF(2^8).
 fn times_0b(b: u8) -> u8 {
+    // 0x0b = 0x08 ^ 0x03.
     times_08(b) ^ times_03(b)
 }
 
+/// Multiplication by 0x0d in the Galois field GF(2^8).
 fn times_0d(b: u8) -> u8 {
+    // 0x0d = 0x08 ^ 0x04 ^ 0x01.
     times_08(b) ^ times_04(b) ^ b
 }
 
+/// Multiplication by 0x0e in the Galois field GF(2^8).
 fn times_0e(b: u8) -> u8 {
+    // 0x0e = 0x08 ^ 0x04 ^ 0x02.
     times_08(b) ^ times_04(b) ^ times_02(b)
 }
 
