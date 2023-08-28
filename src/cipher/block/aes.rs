@@ -69,19 +69,28 @@ const AES256_KEY_BYTES: usize = AES256_NK * WORD_SIZE;
 const AES256_EXPANSION_BYTES: usize = NB * (AES256_NR + 1) * WORD_SIZE;
 
 /// [AES block cipher](crate::doc::aes) with 128-bit keys.
+#[derive(Debug, Default)]
 pub struct Aes128;
 
 impl BlockCipher for Aes128 {
     type Block = [u8; NB * WORD_SIZE];
     type Key = [u8; AES128_NK * WORD_SIZE];
 
-    fn encrypt(data: Plaintext<Self::Block>, key: Key<Self::Key>) -> Ciphertext<Self::Block> {
+    fn encrypt(
+        &self,
+        data: Plaintext<Self::Block>,
+        key: Key<Self::Key>,
+    ) -> Ciphertext<Self::Block> {
         encrypt::<AES128_NK, AES128_NR, AES128_BLOCK_BYTES, AES128_KEY_BYTES, AES128_EXPANSION_BYTES>(
             data, key,
         )
     }
 
-    fn decrypt(data: Ciphertext<Self::Block>, key: Key<Self::Key>) -> Plaintext<Self::Block> {
+    fn decrypt(
+        &self,
+        data: Ciphertext<Self::Block>,
+        key: Key<Self::Key>,
+    ) -> Plaintext<Self::Block> {
         decrypt::<AES128_NK, AES128_NR, AES128_BLOCK_BYTES, AES128_KEY_BYTES, AES128_EXPANSION_BYTES>(
             data, key,
         )
@@ -89,19 +98,28 @@ impl BlockCipher for Aes128 {
 }
 
 /// [AES block cipher](crate::doc::aes) with 192-bit keys.
+#[derive(Debug, Default)]
 pub struct Aes192;
 
 impl BlockCipher for Aes192 {
     type Block = [u8; NB * WORD_SIZE];
     type Key = [u8; AES192_NK * WORD_SIZE];
 
-    fn encrypt(data: Plaintext<Self::Block>, key: Key<Self::Key>) -> Ciphertext<Self::Block> {
+    fn encrypt(
+        &self,
+        data: Plaintext<Self::Block>,
+        key: Key<Self::Key>,
+    ) -> Ciphertext<Self::Block> {
         encrypt::<AES192_NK, AES192_NR, AES192_BLOCK_BYTES, AES192_KEY_BYTES, AES192_EXPANSION_BYTES>(
             data, key,
         )
     }
 
-    fn decrypt(data: Ciphertext<Self::Block>, key: Key<Self::Key>) -> Plaintext<Self::Block> {
+    fn decrypt(
+        &self,
+        data: Ciphertext<Self::Block>,
+        key: Key<Self::Key>,
+    ) -> Plaintext<Self::Block> {
         decrypt::<AES192_NK, AES192_NR, AES192_BLOCK_BYTES, AES192_KEY_BYTES, AES192_EXPANSION_BYTES>(
             data, key,
         )
@@ -109,19 +127,28 @@ impl BlockCipher for Aes192 {
 }
 
 /// [AES block cipher](crate::doc::aes) with 256-bit keys.
+#[derive(Debug, Default)]
 pub struct Aes256;
 
 impl BlockCipher for Aes256 {
     type Block = [u8; NB * WORD_SIZE];
     type Key = [u8; AES256_NK * WORD_SIZE];
 
-    fn encrypt(data: Plaintext<Self::Block>, key: Key<Self::Key>) -> Ciphertext<Self::Block> {
+    fn encrypt(
+        &self,
+        data: Plaintext<Self::Block>,
+        key: Key<Self::Key>,
+    ) -> Ciphertext<Self::Block> {
         encrypt::<AES256_NK, AES256_NR, AES256_BLOCK_BYTES, AES256_KEY_BYTES, AES256_EXPANSION_BYTES>(
             data, key,
         )
     }
 
-    fn decrypt(data: Ciphertext<Self::Block>, key: Key<Self::Key>) -> Plaintext<Self::Block> {
+    fn decrypt(
+        &self,
+        data: Ciphertext<Self::Block>,
+        key: Key<Self::Key>,
+    ) -> Plaintext<Self::Block> {
         decrypt::<AES256_NK, AES256_NR, AES256_BLOCK_BYTES, AES256_KEY_BYTES, AES256_EXPANSION_BYTES>(
             data, key,
         )

@@ -14,17 +14,17 @@ use {
 /// Note that this scheme does not work for $B \ge 256$, since $255$ is the
 /// maximum value for a single byte.
 #[docext]
+#[derive(Debug, Default)]
 pub struct Pkcs7;
 
 impl Padding for Pkcs7 {
     type Err = InvalidPadding;
 
-    fn pad(data: Plaintext<&[u8]>, n: usize) -> Plaintext<Vec<u8>> {
+    fn pad(&self, mut data: Plaintext<Vec<u8>>, n: usize) -> Plaintext<Vec<u8>> {
         if n >= 256 {
             panic!("Pkcs7 does not work for block sizes >= 256");
         }
 
-        let mut data = data.to_vec();
         // Calculate the amount of padding needed.
         let m = n - data.0.len() % n;
         // If the data is already a multiple of the block size, an entire block of
@@ -35,7 +35,11 @@ impl Padding for Pkcs7 {
         data
     }
 
-    fn unpad(data: Plaintext<&[u8]>, n: usize) -> Result<Plaintext<Vec<u8>>, Self::Err> {
+    fn unpad(
+        &self,
+        mut data: Plaintext<Vec<u8>>,
+        n: usize,
+    ) -> Result<Plaintext<Vec<u8>>, Self::Err> {
         if n >= 256 {
             panic!("Pkcs7 does not work for block sizes >= 256");
         }
@@ -54,7 +58,8 @@ impl Padding for Pkcs7 {
         if !padding.iter().all(|&b| usize::try_from(b).unwrap() == m) {
             return Err(InvalidPadding);
         }
-        Ok(Plaintext(&data.0[..data.0.len() - m]).to_vec())
+        data.0.truncate(data.0.len() - m);
+        Ok(data)
     }
 }
 

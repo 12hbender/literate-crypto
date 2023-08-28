@@ -28,12 +28,13 @@ pub trait Cipher {
     type Key: Bytes;
 
     /// Encrypt the plaintext.
-    fn encrypt(data: Plaintext<&[u8]>, key: Key<Self::Key>) -> Ciphertext<Vec<u8>>;
+    fn encrypt(&self, data: Plaintext<Vec<u8>>, key: Key<Self::Key>) -> Ciphertext<Vec<u8>>;
 
     /// Decrypt the ciphertext. This operation can fail, for example, if the
     /// ciphertext was not created by this cipher.
     fn decrypt(
-        data: Ciphertext<&[u8]>,
+        &self,
+        data: Ciphertext<Vec<u8>>,
         key: Key<Self::Key>,
     ) -> Result<Plaintext<Vec<u8>>, Self::Err>;
 }

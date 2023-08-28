@@ -28,9 +28,9 @@ pub trait Padding {
 
     /// Pad the input data to a multiple of `n`. The length of the returned data
     /// must be a multiple of `n`.
-    fn pad(data: Plaintext<&[u8]>, n: usize) -> Plaintext<Vec<u8>>;
+    fn pad(&self, data: Plaintext<Vec<u8>>, n: usize) -> Plaintext<Vec<u8>>;
 
     /// Remove the padding from the input data. Return an error if the padding
     /// is invalid.
-    fn unpad(data: Plaintext<&[u8]>, n: usize) -> Result<Plaintext<Vec<u8>>, Self::Err>;
+    fn unpad(&self, data: Plaintext<Vec<u8>>, n: usize) -> Result<Plaintext<Vec<u8>>, Self::Err>;
 }

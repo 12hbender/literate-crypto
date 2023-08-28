@@ -49,26 +49,16 @@ where
     }
 }
 
-impl Plaintext<&[u8]> {
-    pub fn to_vec(&self) -> Plaintext<Vec<u8>> {
-        Plaintext(self.0.to_vec())
-    }
-}
-
-impl Ciphertext<&[u8]> {
-    pub fn to_vec(&self) -> Ciphertext<Vec<u8>> {
-        Ciphertext(self.0.to_vec())
-    }
-}
-
 /// A fixed-size byte array.
 pub trait Bytes:
     'static
     + for<'a> TryFrom<&'a [u8], Error = std::array::TryFromSliceError>
     + AsRef<[u8]>
+    + AsMut<[u8]>
     + Clone
     + Copy
     + Sized
+    + IntoIterator<Item = u8>
     + std::fmt::Debug
 {
 }

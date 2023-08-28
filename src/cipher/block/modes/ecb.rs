@@ -1,7 +1,4 @@
-use {
-    crate::{BlockCipher, BlockMode, Cipher, Ciphertext, Key, Padding, Plaintext},
-    std::marker::PhantomData,
-};
+use crate::{BlockCipher, BlockMode, Cipher, Ciphertext, Key, Padding, Plaintext};
 
 /// Electronic codebook mode, a simple and insecure mode of operation.
 ///
@@ -14,36 +11,46 @@ use {
 /// messages, he will know when the client is sending two identical messages. If
 /// the attacker can perform some context-dependent analysis of the messages, he
 /// might even be able to guess which messages are being sent (YES or NO).
-#[derive(Debug, Default)]
-pub struct Ecb<Cip, Pad>(PhantomData<Cip>, PhantomData<Pad>);
+#[derive(Debug)]
+pub struct Ecb<Cip, Pad> {
+    cip: Cip,
+    pad: Pad,
+}
+
+impl<Cip: BlockCipher, Pad: Padding> Ecb<Cip, Pad> {
+    pub fn new(cip: Cip, pad: Pad) -> Self {
+        Self { cip, pad }
+    }
+}
 
 impl<Cip: BlockCipher, Pad: Padding> Cipher for Ecb<Cip, Pad> {
     type Err = Pad::Err;
     type Key = Cip::Key;
 
-    fn encrypt(data: Plaintext<&[u8]>, key: Key<Self::Key>) -> Ciphertext<Vec<u8>> {
+    fn encrypt(&self, data: Plaintext<Vec<u8>>, key: Key<Self::Key>) -> Ciphertext<Vec<u8>> {
         let mut result = Vec::new();
-        let n = std::mem::size_of::<Cip::Block>();
-        let data = Pad::pad(data, n);
+        let block_size = std::mem::size_of::<Cip::Block>();
+        let data = self.pad.pad(data, block_size);
         let data = data.as_ref();
-        for block in data.0.chunks(n) {
-            let block = Cip::encrypt(Plaintext(block.try_into().unwrap()), key);
+        for block in data.0.chunks(block_size) {
+            let block = self.cip.encrypt(Plaintext(block.try_into().unwrap()), key);
             result.extend_from_slice(block.0.as_ref());
         }
         Ciphertext(result)
     }
 
     fn decrypt(
-        data: Ciphertext<&[u8]>,
+        &self,
+        data: Ciphertext<Vec<u8>>,
         key: Key<Self::Key>,
     ) -> Result<Plaintext<Vec<u8>>, Self::Err> {
-        let mut result = Vec::new();
-        let n = std::mem::size_of::<Cip::Block>();
-        for block in data.0.chunks(n) {
-            let block = Cip::decrypt(Ciphertext(block.try_into().unwrap()), key);
-            result.extend_from_slice(block.0.as_ref());
+        let mut result = Plaintext(Vec::new());
+        let block_size = std::mem::size_of::<Cip::Block>();
+        for block in data.0.chunks(block_size) {
+            let block = self.cip.decrypt(Ciphertext(block.try_into().unwrap()), key);
+            result.0.extend_from_slice(block.0.as_ref());
         }
-        Pad::unpad(Plaintext(&result), n)
+        self.pad.unpad(result, block_size)
     }
 }
 

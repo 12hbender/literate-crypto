@@ -24,7 +24,10 @@ pub trait BlockCipher {
     type Key: Bytes;
 
     /// Encrypt the plaintext.
-    fn encrypt(data: Plaintext<Self::Block>, key: Key<Self::Key>) -> Ciphertext<Self::Block>;
+    fn encrypt(&self, data: Plaintext<Self::Block>, key: Key<Self::Key>)
+        -> Ciphertext<Self::Block>;
+
     /// Decrypt the ciphertext.
-    fn decrypt(data: Ciphertext<Self::Block>, key: Key<Self::Key>) -> Plaintext<Self::Block>;
+    fn decrypt(&self, data: Ciphertext<Self::Block>, key: Key<Self::Key>)
+        -> Plaintext<Self::Block>;
 }
