@@ -1,6 +1,6 @@
 use crate::{Bytes, Ciphertext, Key, Plaintext};
 
-mod aes;
+pub mod aes;
 mod modes;
 mod padding;
 
