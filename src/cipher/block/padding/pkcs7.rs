@@ -1,6 +1,7 @@
 use {
     crate::{Padding, Plaintext},
     docext::docext,
+    std::fmt,
 };
 
 // TODO Include some examples for what this would look like?
@@ -15,7 +16,7 @@ use {
 /// maximum value for a single byte.
 #[docext]
 #[derive(Debug, Default)]
-pub struct Pkcs7;
+pub struct Pkcs7(());
 
 impl Padding for Pkcs7 {
     type Err = InvalidPadding;
@@ -63,6 +64,11 @@ impl Padding for Pkcs7 {
     }
 }
 
-#[derive(Debug, thiserror::Error)]
-#[error("invalid padding")]
+#[derive(Debug)]
 pub struct InvalidPadding;
+
+impl fmt::Display for InvalidPadding {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "invalid padding")
+    }
+}

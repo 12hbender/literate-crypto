@@ -11,6 +11,7 @@ fn cbc() {
     let key = Key([7, 8]);
 
     let ciphertext = cip.encrypt(data.clone(), key);
+    #[allow(clippy::identity_op)]
     let expected = Ciphertext([
         1 ^ 1 ^ 7,
         2 ^ 2 ^ 8,

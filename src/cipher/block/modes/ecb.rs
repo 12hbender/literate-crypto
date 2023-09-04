@@ -1,6 +1,7 @@
 use crate::{BlockCipher, BlockMode, Cipher, Ciphertext, Key, Padding, Plaintext};
 
-/// Electronic codebook mode, a simple and insecure mode of operation.
+/// Electronic codebook mode, a simple and insecure [mode of
+/// operation](crate::BlockMode).
 ///
 /// ECB is the simplest mode of operation for block ciphers: it simply splits
 /// the input data into blocks, and encrypts each block independently.

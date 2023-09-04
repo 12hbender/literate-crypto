@@ -1,22 +1,37 @@
 use {
-    crate::{BlockCipher, Cipher, Ciphertext, Key, Padding, Plaintext},
+    crate::{BlockCipher, BlockMode, Cipher, Ciphertext, Key, Padding, Plaintext},
+    docext::docext,
     std::mem::size_of,
 };
 
-/// Cipher block chaining mode, the most common mode of operation for block
-/// ciphers.
+/// Cipher block chaining mode, the most common [mode of
+/// operation](crate::BlockMode) for block ciphers.
 ///
-/// CBC XORs the plaintext of each block with the ciphertext of the previous
-/// block before encrypting it. This means that each block depends on all blocks
-/// before it, and changing a single bit in the plaintext will cause the entire
-/// ciphertext to change.
+/// Given a block cipher $E_k$ with key $k$ and some plaintext $P = P_1 || P_2
+/// || \dots || P_n$, where $P_i$ are the plaintext blocks, CBC mode encrypts $P$ as
+/// follows:
+///
+/// $$
+/// C_i = E(P_i \oplus C_{i-1}),\newline
+/// C = C_1 || C_2 || \dots || C_n
+/// $$
+///
+/// $C_0$ is a special value called the _initialization vector (IV)_.
+///
+/// In other words, CBC XORs the plaintext of each block with the ciphertext of
+/// the previous block before encrypting it. This means that each block depends
+/// on all blocks before it, and changing a single bit in the plaintext will
+/// cause every next block of ciphertext to change in an unpredictable way.
 ///
 /// The first block of plaintext is XORed with an initialization vector (IV),
-/// which is a block of random data. The IV does not need to be secret, but it
-/// must be unique for each message encrypted with the same key.
+/// referred to as $C_0$ above. The IV is a block of random data which does not
+/// need to be secret, but it must be unique for each message encrypted with the
+/// same key. The IV is necessary in order to decrypt the ciphertext, and must
+/// be sent to the recipient along with the ciphertext.
 ///
 /// Because the same plaintext with a different IV will encrypt to a different
 /// ciphertext, CBC solves the issues of [ECB mode](crate::Ecb).
+#[docext]
 pub struct Cbc<Cip: BlockCipher, Pad> {
     cip: Cip,
     pad: Pad,
@@ -74,3 +89,5 @@ impl<Cip: BlockCipher, Pad: Padding> Cipher for Cbc<Cip, Pad> {
         self.pad.unpad(Plaintext(result), block_size)
     }
 }
+
+impl<Cip: BlockCipher, Pad: Padding> BlockMode for Cbc<Cip, Pad> {}

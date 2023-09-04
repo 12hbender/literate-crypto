@@ -98,7 +98,7 @@ const AES256_EXPANSION_BYTES: usize = NB * (AES256_NR + 1) * WORD_SIZE;
 
 /// [AES block cipher](self) with 128-bit keys.
 #[derive(Debug, Default)]
-pub struct Aes128;
+pub struct Aes128(());
 
 impl BlockCipher for Aes128 {
     type Block = [u8; NB * WORD_SIZE];
@@ -127,7 +127,7 @@ impl BlockCipher for Aes128 {
 
 /// [AES block cipher](self) with 192-bit keys.
 #[derive(Debug, Default)]
-pub struct Aes192;
+pub struct Aes192(());
 
 impl BlockCipher for Aes192 {
     type Block = [u8; NB * WORD_SIZE];
@@ -156,7 +156,7 @@ impl BlockCipher for Aes192 {
 
 /// [AES block cipher](self) with 256-bit keys.
 #[derive(Debug, Default)]
-pub struct Aes256;
+pub struct Aes256(());
 
 impl BlockCipher for Aes256 {
     type Block = [u8; NB * WORD_SIZE];

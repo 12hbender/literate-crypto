@@ -7,8 +7,7 @@ description = "Literate Cryptography by 12hbender"
 license = "Unlicense"
 
 [dependencies]
-docext = "0.0.3"
-thiserror = "1.0.47"
+docext = "0.0.4"
 
 [dev-dependencies]
-rand = "0.8.5"
+rand = "0.8"
