@@ -72,14 +72,13 @@ where
         Plaintext((0..data_size).map(|_| rand::thread_rng().gen()).collect());
     let key_size = std::mem::size_of::<Cip::Key>();
     let key: Vec<u8> = (0..key_size).map(|_| rand::thread_rng().gen()).collect();
-    let key = Key(Cip::Key::try_from(&key).unwrap());
+    let key = Key(Cip::Key::try_from(key.as_slice()).unwrap());
 
     let ciphertext = cip.encrypt(data.clone(), key);
     let plaintext = cip.decrypt(ciphertext.clone(), key).unwrap();
 
     assert_eq!(
-        data.as_ref(),
-        plaintext.as_ref(),
+        data, plaintext,
         "decrypted plaintext did not match for cipher\ndata: {data:?}\nkey: {key:?}\nciphertext: \
          {ciphertext:?}\nplaintext: {plaintext:?}"
     );

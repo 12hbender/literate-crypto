@@ -21,15 +21,13 @@ fn cbc() {
         2 ^ 2 ^ 8 ^ 4 ^ 8 ^ 6 ^ 8,
     ]);
     assert_eq!(
-        ciphertext.as_ref(),
-        expected.as_ref(),
+        ciphertext.0, expected.0,
         "invalid cbc encryption\nexpected: {expected:?}\nciphertext: {ciphertext:?}"
     );
 
     let plaintext = cip.decrypt(ciphertext, key).unwrap();
     assert_eq!(
-        plaintext.as_ref(),
-        data.as_ref(),
+        plaintext, data,
         "invalid cbc decryption\nexpected: {data:?}\nplaintext: {plaintext:?}"
     );
 }

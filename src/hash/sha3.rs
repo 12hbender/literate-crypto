@@ -1,6 +1,8 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 
+use crate::util::EitherIter;
+
 mod rctable;
 
 use {super::Hash, crate::util::IterChunks, std::iter};
@@ -189,19 +191,19 @@ fn iota(state: &mut State, ir: usize) {
     state[0][0] ^= RC[ir];
 }
 
-fn pad10star1<const R: usize>(data: &[u8]) -> Box<dyn Iterator<Item = [u8; R]> + '_> {
+fn pad10star1<const R: usize>(data: &[u8]) -> impl Iterator<Item = [u8; R]> + '_ {
     if data.len() % R == 0 {
         let mut padding = [0; R];
         padding[0] = 0b00000110;
         padding[R - 1] = 0b10000000;
-        return Box::new(
+        return EitherIter::A(
             data.chunks(R)
                 .map(|block| block.try_into().unwrap())
                 .chain(iter::once(padding)),
         );
     }
 
-    Box::new(data.chunks(R).map(|block| {
+    EitherIter::B(data.chunks(R).map(|block| {
         if block.len() == R {
             block.try_into().unwrap()
         } else {

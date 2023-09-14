@@ -24,34 +24,34 @@ impl<Cip: BlockCipher, Pad: Padding> Ecb<Cip, Pad> {
     }
 }
 
+// TODO Do the encryption and decryption in place. This is the best design.
 impl<Cip: BlockCipher, Pad: Padding> Cipher for Ecb<Cip, Pad> {
     type Err = Pad::Err;
     type Key = Cip::Key;
 
     fn encrypt(&self, data: Plaintext<Vec<u8>>, key: Key<Self::Key>) -> Ciphertext<Vec<u8>> {
-        let mut result = Vec::new();
+        // Encrypt the blocks in-place, using the input vector.
         let block_size = std::mem::size_of::<Cip::Block>();
-        let data = self.pad.pad(data, block_size);
-        let data = data.as_ref();
-        for block in data.0.chunks(block_size) {
-            let block = self.cip.encrypt(Plaintext(block.try_into().unwrap()), key);
-            result.extend_from_slice(block.0.as_ref());
+        let mut data = self.pad.pad(data, block_size);
+        for chunk in data.0.chunks_mut(block_size) {
+            let block = Plaintext(chunk.try_into().unwrap());
+            chunk.copy_from_slice(self.cip.encrypt(block, key).0.as_ref());
         }
-        Ciphertext(result)
+        Ciphertext(data.0)
     }
 
     fn decrypt(
         &self,
-        data: Ciphertext<Vec<u8>>,
+        mut data: Ciphertext<Vec<u8>>,
         key: Key<Self::Key>,
     ) -> Result<Plaintext<Vec<u8>>, Self::Err> {
-        let mut result = Plaintext(Vec::new());
+        // Decrypt the blocks in-place, using the input vector.
         let block_size = std::mem::size_of::<Cip::Block>();
-        for block in data.0.chunks(block_size) {
-            let block = self.cip.decrypt(Ciphertext(block.try_into().unwrap()), key);
-            result.0.extend_from_slice(block.0.as_ref());
+        for chunk in data.0.chunks_mut(block_size) {
+            let block = Ciphertext(chunk.try_into().unwrap());
+            chunk.copy_from_slice(self.cip.decrypt(block, key).0.as_ref());
         }
-        self.pad.unpad(result, block_size)
+        self.pad.unpad(Plaintext(data.0), block_size)
     }
 }
 

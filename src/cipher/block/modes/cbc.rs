@@ -1,5 +1,5 @@
 use {
-    crate::{BlockCipher, BlockMode, Cipher, Ciphertext, Key, Padding, Plaintext},
+    crate::{BlockCipher, BlockMode, Bytes, Cipher, Ciphertext, Key, Padding, Plaintext},
     docext::docext,
     std::mem::size_of,
 };
@@ -51,31 +51,31 @@ impl<Cip: BlockCipher, Pad: Padding> Cipher for Cbc<Cip, Pad> {
     fn encrypt(&self, data: Plaintext<Vec<u8>>, key: Key<Self::Key>) -> Ciphertext<Vec<u8>> {
         let block_size = size_of::<Cip::Block>();
         let mut prev = Ciphertext(self.iv);
-        let mut result = Vec::new();
         let mut data = self.pad.pad(data, block_size);
-        for block in data.0.chunks_mut(block_size) {
+        // Encrypt the blocks in-place, using the input vector.
+        for chunk in data.0.chunks_mut(block_size) {
+            let mut block: Cip::Block = chunk.try_into().unwrap();
             block
                 .iter_mut()
                 .zip(prev.0.into_iter())
                 .for_each(|(a, b)| *a ^= b);
-            let block = &*block;
-            let ciphertext = self.cip.encrypt(Plaintext(block.try_into().unwrap()), key);
-            result.extend_from_slice(ciphertext.0.as_ref());
+            let ciphertext = self.cip.encrypt(Plaintext(block), key);
+            chunk.copy_from_slice(ciphertext.0.as_ref());
             prev = ciphertext;
         }
-        Ciphertext(result)
+        Ciphertext(data.0)
     }
 
     fn decrypt(
         &self,
-        data: Ciphertext<Vec<u8>>,
+        mut data: Ciphertext<Vec<u8>>,
         key: Key<Self::Key>,
     ) -> Result<Plaintext<Vec<u8>>, Self::Err> {
         let block_size = size_of::<Cip::Block>();
         let mut prev = Ciphertext(self.iv);
-        let mut result = Vec::new();
-        for block in data.0.chunks(block_size) {
-            let block = Ciphertext(Cip::Block::try_from(block).unwrap());
+        // Decrypt the blocks in-place, using the input vector.
+        for chunk in data.0.chunks_mut(block_size) {
+            let block = Ciphertext(chunk.try_into().unwrap());
             let mut plaintext = self.cip.decrypt(block, key);
             plaintext
                 .0
@@ -83,10 +83,10 @@ impl<Cip: BlockCipher, Pad: Padding> Cipher for Cbc<Cip, Pad> {
                 .iter_mut()
                 .zip(prev.0.into_iter())
                 .for_each(|(a, b): (&mut u8, _)| *a ^= b);
-            result.extend_from_slice(plaintext.0.as_ref());
+            chunk.copy_from_slice(plaintext.0.as_ref());
             prev = block;
         }
-        self.pad.unpad(Plaintext(result), block_size)
+        self.pad.unpad(Plaintext(data.0), block_size)
     }
 }
 
