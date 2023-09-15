@@ -1,7 +1,13 @@
-// TODO Document that this is just an example of how to generate the RC table
+use {super::NUM_ROUNDS, docext::docext};
 
-use super::{L, NUM_ROUNDS};
+const L: usize = 6;
 
+/// Generate the round constants used by the $\iota$ step.
+///
+/// This is not used in the actual implementation, since the constants are
+/// hardcoded in [`RC`](super::RC).
+#[allow(dead_code)]
+#[docext]
 pub fn rctable() -> [u64; NUM_ROUNDS] {
     let mut table = [0u64; NUM_ROUNDS];
     for (ir, val) in table.iter_mut().enumerate() {
@@ -14,7 +20,7 @@ pub fn rctable() -> [u64; NUM_ROUNDS] {
     table
 }
 
-pub fn rc(t: usize) -> bool {
+fn rc(t: usize) -> bool {
     let t = t % 255;
 
     if t == 0 {
@@ -22,7 +28,7 @@ pub fn rc(t: usize) -> bool {
     }
 
     let mut r = 0x80;
-    for i in 1..=t {
+    for _ in 1..=t {
         let low = r & 0x01 != 0;
         r >>= 1;
         if low {

@@ -1,12 +1,36 @@
-#![allow(dead_code)]
-#![allow(unused_variables)]
+//! SHA-3 is a modern hash function.
+//!
+//! SHA-3 is based on the [_sponge construction_](sponge). It keeps an internal
+//! state, splits the input data into blocks and processes them one by one,
+//! updating the state. Each step is carried out in a fixed number of rounds.
+//! This is called the absorbing phase, an analogy to a sponge soaking up water.
+//!
+//! After all blocks are processed, part of the internal state is used to
+//! extract a piece of the hash output, and then the entirety of the internal
+//! state is processed again to generate a new state. This is repeated until the
+//! desired output length is reached. This is called the squeezing phase,
+//! an analogy to a sponge being squeezed out.
+//!
+//! The block size (r, also known as rate) and the output size (d) are
+//! parameters of the hashing algorithm. There is also an implicit parameter
+//! called the capacity (c), which is the difference between the block size and
+//! the size of the internal state. The capacity is important for security, and
+//! if it is too small, the hash function becomes vulnerable to attacks.
+//!
+//! The SHA-3 hash is specified in [FIPS 202](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf).
 
-use crate::util::EitherIter;
+use {
+    super::Hash,
+    crate::util::{EitherIter, IterChunks},
+    docext::docext,
+    std::iter,
+};
 
 mod rctable;
 
-use {super::Hash, crate::util::IterChunks, std::iter};
+pub use rctable::rctable;
 
+/// [SHA-3 hash](self) with 224-bit output.
 #[derive(Debug, Default)]
 pub struct Sha3_224(());
 
@@ -18,6 +42,7 @@ impl Hash for Sha3_224 {
     }
 }
 
+/// [SHA-3 hash](self) with 256-bit output.
 #[derive(Debug, Default)]
 pub struct Sha3_256(());
 
@@ -29,6 +54,7 @@ impl Hash for Sha3_256 {
     }
 }
 
+/// [SHA-3 hash](self) with 384-bit output.
 #[derive(Debug, Default)]
 pub struct Sha3_384(());
 
@@ -40,6 +66,7 @@ impl Hash for Sha3_384 {
     }
 }
 
+/// [SHA-3 hash](self) with 512-bit output.
 #[derive(Debug, Default)]
 pub struct Sha3_512(());
 
@@ -53,12 +80,23 @@ impl Hash for Sha3_512 {
 
 const NUM_ROWS: usize = 5;
 const NUM_COLS: usize = 5;
-const NUM_ROUNDS: usize = 24;
-const L: usize = 6;
 
-type State = [[u64; NUM_COLS]; NUM_ROWS];
+/// Number of rounds in the [Keccak-p permutation](keccak_p).
+pub const NUM_ROUNDS: usize = 24;
 
-const RHO_OFFSETS: [[u32; NUM_COLS]; NUM_ROWS] = [
+/// The internal state of the [SHA-3 algorithm](self), also referred to as $A$.
+/// This is a 5x5 matrix of 64-bit words.
+///
+/// The state is accessed as $A_{x, y, z}$, where $x$ is the column, $y$ is the
+/// row and $z$ is the _bit_ being accessed, $x, y \in \\{ 0, 1, \dots, 4 \\}$,
+/// $z \in \\{ 0, 1, \dots, 63 \\}$. The bit can be omitted to access the entire
+/// word.
+#[docext]
+pub type State = [[u64; NUM_COLS]; NUM_ROWS];
+
+/// The offsets used by the $\rho$ step.
+#[docext]
+pub const RHO_OFFSETS: [[u32; NUM_COLS]; NUM_ROWS] = [
     [0, 1, 190, 28, 91],
     [36, 300, 6, 55, 276],
     [3, 10, 171, 153, 231],
@@ -66,7 +104,10 @@ const RHO_OFFSETS: [[u32; NUM_COLS]; NUM_ROWS] = [
     [210, 66, 253, 120, 78],
 ];
 
-const RC: [u64; NUM_ROUNDS] = [
+/// The round constants used by the $\iota$ step. These were generated via
+/// [`rctable`](rctable::rctable).
+#[docext]
+pub const RC: [u64; NUM_ROUNDS] = [
     0x0000000000000001,
     0x0000000000008082,
     0x800000000000808a,
@@ -93,10 +134,14 @@ const RC: [u64; NUM_ROUNDS] = [
     0x8000000080008008,
 ];
 
-fn sponge<const R: usize, const D: usize>(input: &[u8]) -> [u8; D] {
+/// The sponge construction with the rate (block size) `R` and output size `D`,
+/// and function [Keccak-p](keccak_p).
+///
+/// This process is described in the [module documentation](self).
+pub fn sponge<const R: usize, const D: usize>(input: &[u8]) -> [u8; D] {
     let mut state = State::default();
 
-    // Absorption phase.
+    // Absorbing phase.
     for block in pad10star1::<R>(input) {
         block
             .into_iter()
@@ -107,7 +152,7 @@ fn sponge<const R: usize, const D: usize>(input: &[u8]) -> [u8; D] {
         keccak_p(&mut state);
     }
 
-    // Squeeze phase.
+    // Squeezing phase.
     let mut output = [0; D];
     state
         .iter()
@@ -118,7 +163,19 @@ fn sponge<const R: usize, const D: usize>(input: &[u8]) -> [u8; D] {
     output
 }
 
-fn keccak_p(state: &mut State) {
+/// The Keccak-p permutation specified in Section 3.3 of the specification.
+///
+/// Applies [`NUM_ROUNDS`] rounds of the [$\theta$](theta), [$\rho$](rho),
+/// [$\pi$](pi), [$\chi$](chi), and [$\iota$](iota) steps.
+///
+/// The $\theta$, $\rho$, and $\pi$ steps add diffusion.
+///
+/// The $\chi$ step adds non-linearity with AND operations, which is crucial for
+/// security.
+///
+/// The $\iota$ step adds a round constant to the state.
+#[docext]
+pub fn keccak_p(state: &mut State) {
     for ir in 0..NUM_ROUNDS {
         theta(state);
         rho(state);
@@ -128,20 +185,78 @@ fn keccak_p(state: &mut State) {
     }
 }
 
-// TODO hash() should take a reference as input
-// TODO So should encrypt, and I think Pad::pad should accept blocks? Or produce
-// blocks?
-// TODO Maybe I should have a blocks() method which returns enum Block =
-// Complete | Incomplete? And pad accepts IncompleteBlock?
-// TODO There's no need for that, just document it. pad
-// method should pad blocks to N, and return an iterator of blocks, unpad
-// should unpad vectors
-// TODO The LE order and the need for "opposite" rotations is explained by
-// seciton B.1, the bit string order used in the spec is the opposite of the bit
-// string order used by computers
-
+/// The $\theta$ step specified in Section 3.2.1 of the specification.
+///
+/// First, a new word array $C$ is computed:
+///
+/// $$
+/// C_{x, z} = A_ {x, 0, z} \oplus A_{x, 1, z} \oplus A_{x, 2, z} \oplus A_{x,
+/// 3, z} \oplus A_{x, 4, z},\newline
+/// x \in \\{0, 1, \dots, 4\\},
+/// z \in \\{0, 1, \dots, 63\\}
+/// $$
+///
+/// Where $A$ is the [internal state](State). To operate on words instead of
+/// bits, the $z$ index can be omitted:
+///
+/// $$
+/// C_{x} = A_ {x, 0} \oplus A_{x, 1} \oplus A_{x, 2} \oplus A_{x, 3} \oplus
+/// A_{x, 4},\newline
+/// x \in \\{0, 1, \dots, 4\\},
+/// $$
+///
+/// Clearly, $C_{x}$ is the XOR of all words in column $x$ of $A$.
+///
+/// Next, a word array $D$ is computed:
+///
+/// $$
+/// D_{x, z} = C_{x - 1 \pmod{5}, \space z} \oplus C_{x + 1 \pmod{5}, \space z -
+/// 1 \pmod{64}},\newline
+/// x \in \\{0, 1, \dots, 4\\},
+/// z \in \\{0, 1, \dots, 63\\}
+/// $$
+///
+/// The only interesting bit is that $D_{\dots, \space z}$ is computed using
+/// $C_{\dots, \space z - 1 \pmod{64}}$. The $z - 1 \pmod{64}$ represents a
+/// rotation of the word by one bit to the right. However, due to the specific
+/// bit convention used by SHA-3 (described in Section B.1 of the
+/// specification — essentially, the bit order in the specification is left to
+/// right, whereas computers order bits right to left, the rightmost bit being
+/// the least significant), this rotation is actually a rotation to the left:
+///
+/// $$
+/// D_{x} = C_{x - 1 \pmod{5}} \oplus \mathrm{ROTL}(C_{x + 1 \pmod{5}}),\newline
+/// x \in \\{0, 1, \dots, 4\\},
+/// z \in \\{0, 1, \dots, 63\\}
+/// $$
+///
+/// Where $\mathrm{ROTL}$ is the left rotation by one bit.
+///
+/// Finally, the state is updated:
+/// $$
+/// A_{x, y, z}^{\prime} = A_{x, y, z} \oplus D_{x, z},\newline
+/// x, y \in \\{0, 1, \dots, 4\\},
+/// z \in \\{0, 1, \dots, 63\\}
+/// $$
+///
+/// Which is equivalent to the following operations on words:
+/// $$
+/// A_{x, y}^{\prime} = A_{x, y} \oplus D_{x},\newline
+/// x, y \in \\{0, 1, \dots, 4\\}
+/// $$
+///
+/// Since $D$ only depends on $C$, and $C$ is never updated, the $D$ array can
+/// be inlined:
+///
+/// $$
+/// A_{x, y}^{\prime} = A_{x, y} \oplus C_{x - 1 \pmod{5}} \oplus
+/// \mathrm{ROTL}(C_{x + 1 \pmod{5}}),\newline
+/// x, y \in \\{0, 1, \dots, 4\\},\newline
+/// A \gets A^{\prime}
+/// $$
+#[docext]
 #[allow(clippy::needless_range_loop)]
-fn theta(state: &mut State) {
+pub fn theta(state: &mut State) {
     // Set c[x] to the XOR of all rows at column x.
     let mut c = [0u64; NUM_COLS];
     for y in 0..NUM_ROWS {
@@ -158,8 +273,23 @@ fn theta(state: &mut State) {
     }
 }
 
+/// The $\rho$ step specified in Section 3.2.2 of the specification.
+///
+/// This step rotates each word in the state by a fixed amount of bits, encoded
+/// in the [`RHO_OFFSETS`](RHO_OFFSETS) table, referred to as $\rho$.
+///
+/// $$
+/// A_{x, y, z} \gets A_{x, y, z - \rho(x, y)} \Rightarrow
+/// A_{x, y} \gets \mathrm{ROTL}(A_{x, y}, \rho(x, y)),\newline
+/// x, y \in \\{0, 1, \dots, 4\\},
+/// z \in \\{0, 1, \dots, 63\\}
+/// $$
+///
+/// Where $\mathrm{ROTL}(b, n)$ is the binary left rotation of number $b$ by $n$
+/// bits.
+#[docext]
 #[allow(clippy::needless_range_loop)]
-fn rho(state: &mut State) {
+pub fn rho(state: &mut State) {
     for y in 0..NUM_ROWS {
         for x in 0..NUM_COLS {
             state[y][x] = state[y][x].rotate_left(RHO_OFFSETS[y][x]);
@@ -167,8 +297,20 @@ fn rho(state: &mut State) {
     }
 }
 
+/// The $\pi$ step specified in Section 3.2.3 of the specification.
+///
+/// Shuffles the words in the state:
+///
+/// $$
+/// A_{x, y, z}^{\prime} = A_{(x + 3y) \pmod{5}, \space x, \space z},
+/// \Rightarrow A_{x, y}^{\prime} = A_{(x + 3y) \pmod{5}, \space x}, \newline
+/// x, y \in \\{0, 1, \dots, 4\\},
+/// z \in \\{0, 1, \dots, 63\\},\newline
+/// A \gets A^{\prime}
+/// $$
+#[docext]
 #[allow(clippy::needless_range_loop)]
-fn pi(state: &mut State) {
+pub fn pi(state: &mut State) {
     let copy = *state;
     for y in 0..NUM_ROWS {
         for x in 0..NUM_COLS {
@@ -177,8 +319,29 @@ fn pi(state: &mut State) {
     }
 }
 
+/// The $\chi$ step specified in Section 3.2.4 of the specification.
+///
+/// Adds nonlinearity by applying a binary AND operation to words:
+///
+/// $$
+/// A_{x, y, z}^{\prime} = A_{x, y, z} \oplus ((A_{(x+1) \pmod{5}, \space y,
+/// \space z} \oplus 1) \cdot A_{(x+2) \pmod{5}, \space y, \space z}),\newline
+/// x, y \in \\{0, 1, \dots, 4\\},
+/// z \in \\{0, 1, \dots, 63\\}
+/// $$
+///
+/// Where $\cdot$ is the binary AND operation. $b \oplus 1$ is equivalent to a
+/// bitwise NOT of bit $b$, hence we can apply the above to words as follows:
+///
+/// $$
+/// A_{x, y}^{\prime} = A_{x, y} \oplus ((\mathrm{NOT}(A_{(x+1) \pmod{5}, \space
+/// y })) \cdot A_{(x+2) \pmod{5}, \space y}) \newline
+/// x, y \in \\{0, 1, \dots, 4\\},\newline
+/// A \gets A^{\prime}
+/// $$
+#[docext]
 #[allow(clippy::needless_range_loop)]
-fn chi(state: &mut State) {
+pub fn chi(state: &mut State) {
     let copy = *state;
     for y in 0..NUM_ROWS {
         for x in 0..NUM_COLS {
@@ -187,11 +350,32 @@ fn chi(state: &mut State) {
     }
 }
 
-fn iota(state: &mut State, ir: usize) {
+/// The $\iota$ step specified in Section 3.2.5 of the specification.
+///
+/// Applies a round constant to the state, depending on the round number $i_r$:
+///
+/// $$
+/// A_{0, 0} \gets A_{0, 0} \oplus RC_{i_r}
+/// $$
+///
+/// Round constant generation is implemented in [`rctable`](rctable::rctable).
+#[docext]
+pub fn iota(state: &mut State, ir: usize) {
     state[0][0] ^= RC[ir];
 }
 
-fn pad10star1<const R: usize>(data: &[u8]) -> impl Iterator<Item = [u8; R]> + '_ {
+/// Pad the input data to a multiple of the block size (r, also known as rate)
+/// in the Keccak-p permutation.
+///
+/// The padding is specified in Section 5.1 of the specification, called
+/// pad10*1. It pads the data by adding a single 1 bit, as many 0 bits as
+/// needed, and a final 1 bit.
+///
+/// Additionally, the bit string "10" is appended to the data before padding.
+/// This is called the _domain separator_ and serves to disambiguate SHA-3's
+/// usage of Keccak-p from other uses of Keccak-p.
+#[docext]
+pub fn pad10star1<const R: usize>(data: &[u8]) -> impl Iterator<Item = [u8; R]> + '_ {
     if data.len() % R == 0 {
         let mut padding = [0; R];
         padding[0] = 0b00000110;
@@ -208,13 +392,6 @@ fn pad10star1<const R: usize>(data: &[u8]) -> impl Iterator<Item = [u8; R]> + '_
             block.try_into().unwrap()
         } else {
             let mut padded = [0; R];
-            // TODO I think the problem is once again the weird bit convention
-            // TODO I need to actually understand what I'm doing, what a bit string is,
-            // how to convert it to a state, and how to convert it back
-            // Especially the z index of it
-            // I don't understand why this would fuck with my padding
-            // The padded string doesn't change based on bit order
-            // The only thing that should change are the bit shifts
             block
                 .iter()
                 .copied()
@@ -222,15 +399,15 @@ fn pad10star1<const R: usize>(data: &[u8]) -> impl Iterator<Item = [u8; R]> + '_
                 .zip(padded.iter_mut())
                 .enumerate()
                 .for_each(|(i, (mut b, r))| {
-                    // TODO Maybe this check is incorrect?
-                    // TODO Print out the `padded` variable
                     if i == block.len() {
-                        // This is the first byte of padding. TODO Explain why this is 0b01100000,
-                        // the 01 is the domain separator
+                        // This is the first byte of padding, so start with the domain separator
+                        // "10" and a leading "1" bit. The bit order used by the specification
+                        // (described in Section B.1) is the opposite of the bit order used by
+                        // computers, so these constants are reversed.
                         b |= 0b00000110;
                     }
                     if i == R - 1 {
-                        // This is the last byte of padding.
+                        // This is the last byte of padding, so add a final "1" bit.
                         b |= 0b10000000;
                     }
                     *r = b;
