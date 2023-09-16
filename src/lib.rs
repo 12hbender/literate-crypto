@@ -1,3 +1,5 @@
+#![feature(return_position_impl_trait_in_trait)]
+
 #[cfg(test)]
 mod test;
 
@@ -20,6 +22,8 @@ pub use {
         Aes192,
         Aes256,
         BlockCipher,
+        BlockDecrypt,
+        BlockEncrypt,
         BlockMode,
         Cbc,
         Cipher,

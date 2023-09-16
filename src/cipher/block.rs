@@ -19,15 +19,34 @@ pub use {
 ///
 /// The encrypt and decrypt methods must fulfill the same contract as those in
 /// the [`crate::Cipher`] trait.
-pub trait BlockCipher {
+pub trait BlockCipher:
+    BlockEncrypt<EncryptionBlock = Self::Block, EncryptionKey = Self::Key>
+    + BlockDecrypt<DecryptionBlock = Self::Block, DecryptionKey = Self::Key>
+{
     type Block: Bytes;
     type Key: Bytes;
+}
+
+pub trait BlockEncrypt {
+    type EncryptionBlock: Bytes;
+    type EncryptionKey: Bytes;
 
     /// Encrypt the plaintext.
-    fn encrypt(&self, data: Plaintext<Self::Block>, key: Key<Self::Key>)
-        -> Ciphertext<Self::Block>;
+    fn encrypt(
+        &self,
+        data: Plaintext<Self::EncryptionBlock>,
+        key: Key<Self::EncryptionKey>,
+    ) -> Ciphertext<Self::EncryptionBlock>;
+}
+
+pub trait BlockDecrypt {
+    type DecryptionBlock: Bytes;
+    type DecryptionKey: Bytes;
 
     /// Decrypt the ciphertext.
-    fn decrypt(&self, data: Ciphertext<Self::Block>, key: Key<Self::Key>)
-        -> Plaintext<Self::Block>;
+    fn decrypt(
+        &self,
+        data: Ciphertext<Self::DecryptionBlock>,
+        key: Key<Self::DecryptionKey>,
+    ) -> Plaintext<Self::DecryptionBlock>;
 }

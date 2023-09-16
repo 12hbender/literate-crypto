@@ -376,6 +376,8 @@ pub fn iota(state: &mut State, ir: usize) {
 /// usage of Keccak-p from other uses of Keccak-p.
 #[docext]
 pub fn pad10star1<const R: usize>(data: &[u8]) -> impl Iterator<Item = [u8; R]> + '_ {
+    // TODO I can simplify this and remove EitherIter
+
     if data.len() % R == 0 {
         let mut padding = [0; R];
         padding[0] = 0b00000110;

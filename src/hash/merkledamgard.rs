@@ -1,19 +1,72 @@
 #![allow(dead_code)]
 
-use crate::Bytes;
+use crate::{BlockEncrypt, Bytes, Hash};
 
 // TODO The Merkle-Damgard construction
-pub struct MerkleDamgard /* <Cf: CompressionFn> */;
+pub struct MerkleDamgard<
+    State: Bytes,
+    Block: Bytes,
+    F: CompressionFn<State = State, Block = Block>,
+    Pad: MerkleDamgardPad<Block = Block>,
+> {
+    f: F,
+    pad: Pad,
+    iv: State,
+}
 
 // TODO Compression function used by the Merkle-Damgard construction
 pub trait CompressionFn {
     type State: Bytes;
     type Block: Bytes;
 
-    fn compress(&self, state: Self::State, input: Self::Block) -> Self::State;
+    fn compress(&self, state: Self::State, block: Self::Block) -> Self::State;
 }
 
-// TODO MD-compliant padding, split Padding into Pad and Unpad, change the
-// interface into what it was before, and rename Padding into PaddingScheme
-// TODO Do the same thing for BlockCipher = BlockEncrypt + BlockDecrypt
-pub trait MdCompliantPad /* : Pad */ {}
+// TODO MD-compliant padding
+pub trait MerkleDamgardPad {
+    type Block: Bytes;
+
+    fn pad(&self, input: &[u8]) -> impl Iterator<Item = Self::Block>;
+}
+
+impl<
+        State: Bytes,
+        Block: Bytes,
+        F: CompressionFn<State = State, Block = Block>,
+        Pad: MerkleDamgardPad<Block = Block>,
+    > MerkleDamgard<State, Block, F, Pad>
+{
+    pub fn new(f: F, pad: Pad, iv: State) -> Self {
+        Self { f, pad, iv }
+    }
+}
+
+/// Implementation of the Merkle-Damgard construction.
+impl<
+        State: Bytes,
+        Block: Bytes,
+        F: CompressionFn<State = State, Block = Block>,
+        Pad: MerkleDamgardPad<Block = Block>,
+    > Hash for MerkleDamgard<State, Block, F, Pad>
+{
+    type Output = State;
+
+    fn hash(&self, input: &[u8]) -> Self::Output {
+        self.pad
+            .pad(input)
+            .fold(self.iv, |state, block| self.f.compress(state, block))
+    }
+}
+
+// TODO Should this be in a separate module? Submodule maybe?
+// TODO Davies-Meyer construction
+pub struct DaviesMeyer<Enc: BlockEncrypt>(Enc);
+
+impl<Enc: BlockEncrypt> CompressionFn for DaviesMeyer<Enc> {
+    type Block = Enc::EncryptionKey;
+    type State = Enc::EncryptionBlock;
+
+    fn compress(&self, state: Self::State, input: Self::Block) -> Self::State {
+        todo!()
+    }
+}
