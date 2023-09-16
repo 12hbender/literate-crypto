@@ -1,3 +1,3 @@
 mod iter;
 
-pub(crate) use iter::{EitherIter, IterChunks};
+pub(crate) use iter::IterChunks;

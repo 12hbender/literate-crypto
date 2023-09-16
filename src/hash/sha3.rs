@@ -19,12 +19,7 @@
 //!
 //! The SHA-3 hash is specified in [FIPS 202](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf).
 
-use {
-    super::Hash,
-    crate::util::{EitherIter, IterChunks},
-    docext::docext,
-    std::iter,
-};
+use {super::Hash, crate::util::IterChunks, docext::docext, std::iter};
 
 mod rctable;
 
@@ -376,45 +371,45 @@ pub fn iota(state: &mut State, ir: usize) {
 /// usage of Keccak-p from other uses of Keccak-p.
 #[docext]
 pub fn pad10star1<const R: usize>(data: &[u8]) -> impl Iterator<Item = [u8; R]> + '_ {
-    // TODO I can simplify this and remove EitherIter
-
-    if data.len() % R == 0 {
-        let mut padding = [0; R];
-        padding[0] = 0b00000110;
-        padding[R - 1] = 0b10000000;
-        return EitherIter::A(
-            data.chunks(R)
-                .map(|block| block.try_into().unwrap())
-                .chain(iter::once(padding)),
-        );
-    }
-
-    EitherIter::B(data.chunks(R).map(|block| {
-        if block.len() == R {
-            block.try_into().unwrap()
-        } else {
-            let mut padded = [0; R];
-            block
-                .iter()
-                .copied()
-                .chain(iter::repeat(0))
-                .zip(padded.iter_mut())
-                .enumerate()
-                .for_each(|(i, (mut b, r))| {
-                    if i == block.len() {
-                        // This is the first byte of padding, so start with the domain separator
-                        // "10" and a leading "1" bit. The bit order used by the specification
-                        // (described in Section B.1) is the opposite of the bit order used by
-                        // computers, so these constants are reversed.
-                        b |= 0b00000110;
-                    }
-                    if i == R - 1 {
-                        // This is the last byte of padding, so add a final "1" bit.
-                        b |= 0b10000000;
-                    }
-                    *r = b;
-                });
-            padded
-        }
-    }))
+    data.chunks(R)
+        .map(|block| {
+            if block.len() == R {
+                block.try_into().unwrap()
+            } else {
+                // This block is incomplete and needs padding.
+                let mut padded = [0; R];
+                block
+                    .iter()
+                    .copied()
+                    .chain(iter::repeat(0))
+                    .zip(padded.iter_mut())
+                    .enumerate()
+                    .for_each(|(i, (mut b, r))| {
+                        if i == block.len() {
+                            // This is the first byte of padding, so start with the domain separator
+                            // "10" and a leading "1" bit. The bit order used by the specification
+                            // (described in Section B.1) is the opposite of the bit order used by
+                            // computers, so these constants are reversed.
+                            b |= 0b00000110;
+                        }
+                        if i == R - 1 {
+                            // This is the last byte of padding, so add a final "1" bit.
+                            b |= 0b10000000;
+                        }
+                        *r = b;
+                    });
+                padded
+            }
+        })
+        .chain(
+            // If the data is a multiple of the block size, a full block of padding needs to be
+            // added.
+            iter::once_with(|| {
+                let mut padding = [0; R];
+                padding[0] = 0b00000110;
+                padding[R - 1] = 0b10000000;
+                padding
+            })
+            .take(if data.len() % R == 0 { 1 } else { 0 }),
+        )
 }

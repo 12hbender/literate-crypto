@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use crate::{BlockEncrypt, Bytes, Hash};
 
 // TODO The Merkle-Damgard construction
@@ -66,7 +64,7 @@ impl<Enc: BlockEncrypt> CompressionFn for DaviesMeyer<Enc> {
     type Block = Enc::EncryptionKey;
     type State = Enc::EncryptionBlock;
 
-    fn compress(&self, state: Self::State, input: Self::Block) -> Self::State {
+    fn compress(&self, _state: Self::State, _input: Self::Block) -> Self::State {
         todo!()
     }
 }

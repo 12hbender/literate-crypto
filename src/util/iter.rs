@@ -37,25 +37,3 @@ where
         Some(result)
     }
 }
-
-/// An iterator which yields items from one of two different iterator types.
-/// Models a logical "OR" combination for iterator types.
-pub(crate) enum EitherIter<A, B> {
-    A(A),
-    B(B),
-}
-
-impl<Item, A, B> Iterator for EitherIter<A, B>
-where
-    A: Iterator<Item = Item>,
-    B: Iterator<Item = Item>,
-{
-    type Item = Item;
-
-    fn next(&mut self) -> Option<Item> {
-        match self {
-            EitherIter::A(a) => a.next(),
-            EitherIter::B(b) => b.next(),
-        }
-    }
-}
