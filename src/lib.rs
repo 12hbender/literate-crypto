@@ -34,6 +34,8 @@ pub use {
     hash::{
         sha3,
         CompressionFn,
+        DaviesMeyer,
+        DaviesMeyerStep,
         Hash,
         MerkleDamgard,
         MerkleDamgardPad,

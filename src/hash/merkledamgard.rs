@@ -1,4 +1,8 @@
-use crate::{BlockEncrypt, Bytes, Hash};
+use crate::{Bytes, Hash};
+
+mod daviesmeyer;
+
+pub use daviesmeyer::{DaviesMeyer, DaviesMeyerStep};
 
 // TODO The Merkle-Damgard construction
 pub struct MerkleDamgard<
@@ -53,18 +57,5 @@ impl<
         self.pad
             .pad(input)
             .fold(self.iv, |state, block| self.f.compress(state, block))
-    }
-}
-
-// TODO Should this be in a separate module? Submodule maybe?
-// TODO Davies-Meyer construction
-pub struct DaviesMeyer<Enc: BlockEncrypt>(Enc);
-
-impl<Enc: BlockEncrypt> CompressionFn for DaviesMeyer<Enc> {
-    type Block = Enc::EncryptionKey;
-    type State = Enc::EncryptionBlock;
-
-    fn compress(&self, _state: Self::State, _input: Self::Block) -> Self::State {
-        todo!()
     }
 }
