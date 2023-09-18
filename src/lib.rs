@@ -1,4 +1,6 @@
 #![feature(return_position_impl_trait_in_trait)]
+#![feature(array_chunks)]
+#![forbid(unsafe_code)]
 
 #[cfg(test)]
 mod test;
@@ -22,8 +24,6 @@ pub use {
         Aes192,
         Aes256,
         BlockCipher,
-        BlockDecrypt,
-        BlockEncrypt,
         BlockMode,
         Cbc,
         Cipher,
@@ -35,10 +35,12 @@ pub use {
         sha3,
         CompressionFn,
         DaviesMeyer,
+        DaviesMeyerCipher,
         DaviesMeyerStep,
         Hash,
         MerkleDamgard,
         MerkleDamgardPad,
+        Sha1,
         Sha3_224,
         Sha3_256,
         Sha3_384,

@@ -1,5 +1,9 @@
-use crate::{Hash, Sha3_224, Sha3_256, Sha3_384, Sha3_512};
+use {
+    super::test,
+    crate::{Sha3_224, Sha3_256, Sha3_384, Sha3_512},
+};
 
+/// SHA3-224 test vectors.
 #[test]
 fn sha3_224() {
     let hash = Sha3_224::default();
@@ -51,6 +55,7 @@ fn sha3_224() {
     );
 }
 
+/// SHA3-256 test vectors.
 #[test]
 fn sha3_256() {
     let hash = Sha3_256::default();
@@ -107,6 +112,7 @@ fn sha3_256() {
     );
 }
 
+/// SHA3-384 test vectors.
 #[test]
 fn sha3_384() {
     let hash = Sha3_384::default();
@@ -168,6 +174,7 @@ fn sha3_384() {
     );
 }
 
+/// SHA3-512 test vectors.
 #[test]
 fn sha3_512() {
     let hash = Sha3_512::default();
@@ -231,14 +238,5 @@ fn sha3_512() {
             0x51, 0x76, 0xea, 0x17, 0x5f, 0x79, 0x0a, 0xab, 0xdd, 0xf6, 0x8d, 0x4e, 0x36, 0x10,
             0x00, 0x6c, 0xee, 0x68, 0x32, 0xe3, 0x7d, 0x2d,
         ],
-    );
-}
-
-fn test(hash: &impl Hash, input: &[u8], output: &[u8]) {
-    let hash = hash.hash(input);
-    assert_eq!(
-        hash.as_ref(),
-        output,
-        "invalid hash for:\n{input:#?}\n\nexpected:\n{output:#?}\n\ngot:\n{hash:#?}"
     );
 }

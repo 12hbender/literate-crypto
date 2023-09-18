@@ -372,6 +372,11 @@ pub fn iota(state: &mut State, ir: usize) {
 #[docext]
 pub fn pad10star1<const R: usize>(data: &[u8]) -> impl Iterator<Item = [u8; R]> + '_ {
     data.chunks(R)
+        .chain(
+            // If the data is a multiple of the block size, a full block of padding needs to be
+            // added.
+            iter::once([].as_slice()).take(if data.len() % R == 0 { 1 } else { 0 }),
+        )
         .map(|block| {
             if block.len() == R {
                 block.try_into().unwrap()
@@ -401,15 +406,4 @@ pub fn pad10star1<const R: usize>(data: &[u8]) -> impl Iterator<Item = [u8; R]> 
                 padded
             }
         })
-        .chain(
-            // If the data is a multiple of the block size, a full block of padding needs to be
-            // added.
-            iter::once_with(|| {
-                let mut padding = [0; R];
-                padding[0] = 0b00000110;
-                padding[R - 1] = 0b10000000;
-                padding
-            })
-            .take(if data.len() % R == 0 { 1 } else { 0 }),
-        )
 }

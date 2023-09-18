@@ -1,15 +1,5 @@
 use {
-    crate::{
-        BlockCipher,
-        BlockDecrypt,
-        BlockEncrypt,
-        Cbc,
-        Cipher,
-        Ciphertext,
-        Key,
-        Padding,
-        Plaintext,
-    },
+    crate::{BlockCipher, Cbc, Cipher, Ciphertext, Key, Padding, Plaintext},
     std::convert::Infallible,
 };
 
@@ -45,35 +35,25 @@ fn cbc() {
 /// Test block cipher which XORs the data with the key.
 struct TestCipher;
 
-impl BlockEncrypt for TestCipher {
-    type EncryptionBlock = [u8; 2];
-    type EncryptionKey = [u8; 2];
-
-    fn encrypt(
-        &self,
-        data: Plaintext<Self::EncryptionBlock>,
-        key: Key<Self::EncryptionKey>,
-    ) -> Ciphertext<Self::EncryptionBlock> {
-        Ciphertext([data.0[0] ^ key.0[0], data.0[1] ^ key.0[1]])
-    }
-}
-
-impl BlockDecrypt for TestCipher {
-    type DecryptionBlock = [u8; 2];
-    type DecryptionKey = [u8; 2];
-
-    fn decrypt(
-        &self,
-        data: Ciphertext<Self::DecryptionBlock>,
-        key: Key<Self::DecryptionKey>,
-    ) -> Plaintext<Self::DecryptionBlock> {
-        Plaintext([data.0[0] ^ key.0[0], data.0[1] ^ key.0[1]])
-    }
-}
-
 impl BlockCipher for TestCipher {
     type Block = [u8; 2];
     type Key = [u8; 2];
+
+    fn encrypt(
+        &self,
+        data: Plaintext<Self::Block>,
+        key: Key<Self::Key>,
+    ) -> Ciphertext<Self::Block> {
+        Ciphertext([data.0[0] ^ key.0[0], data.0[1] ^ key.0[1]])
+    }
+
+    fn decrypt(
+        &self,
+        data: Ciphertext<Self::Block>,
+        key: Key<Self::Key>,
+    ) -> Plaintext<Self::Block> {
+        Plaintext([data.0[0] ^ key.0[0], data.0[1] ^ key.0[1]])
+    }
 }
 
 /// Test padding which does nothing.

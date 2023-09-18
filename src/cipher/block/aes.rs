@@ -21,7 +21,7 @@
 //! [`decrypt`] methods.
 
 use {
-    crate::{BlockCipher, BlockDecrypt, BlockEncrypt, Ciphertext, Key, Plaintext},
+    crate::{BlockCipher, Ciphertext, Key, Plaintext},
     docext::docext,
 };
 
@@ -100,117 +100,87 @@ const AES256_EXPANSION_BYTES: usize = NB * (AES256_NR + 1) * WORD_SIZE;
 #[derive(Debug, Default)]
 pub struct Aes128(());
 
-impl BlockEncrypt for Aes128 {
-    type EncryptionBlock = [u8; NB * WORD_SIZE];
-    type EncryptionKey = [u8; AES128_NK * WORD_SIZE];
+impl BlockCipher for Aes128 {
+    type Block = [u8; NB * WORD_SIZE];
+    type Key = [u8; AES128_NK * WORD_SIZE];
 
     fn encrypt(
         &self,
-        data: Plaintext<Self::EncryptionBlock>,
-        key: Key<Self::EncryptionKey>,
-    ) -> Ciphertext<Self::EncryptionBlock> {
+        data: Plaintext<Self::Block>,
+        key: Key<Self::Key>,
+    ) -> Ciphertext<Self::Block> {
         encrypt::<AES128_NK, AES128_NR, AES128_BLOCK_BYTES, AES128_KEY_BYTES, AES128_EXPANSION_BYTES>(
             data, key,
         )
     }
-}
-
-impl BlockDecrypt for Aes128 {
-    type DecryptionBlock = [u8; NB * WORD_SIZE];
-    type DecryptionKey = [u8; AES128_NK * WORD_SIZE];
 
     fn decrypt(
         &self,
-        data: Ciphertext<Self::DecryptionBlock>,
-        key: Key<Self::DecryptionKey>,
-    ) -> Plaintext<Self::DecryptionBlock> {
+        data: Ciphertext<Self::Block>,
+        key: Key<Self::Key>,
+    ) -> Plaintext<Self::Block> {
         decrypt::<AES128_NK, AES128_NR, AES128_BLOCK_BYTES, AES128_KEY_BYTES, AES128_EXPANSION_BYTES>(
             data, key,
         )
     }
 }
 
-impl BlockCipher for Aes128 {
-    type Block = [u8; NB * WORD_SIZE];
-    type Key = [u8; AES128_NK * WORD_SIZE];
-}
-
 /// [AES block cipher](self) with 192-bit keys.
 #[derive(Debug, Default)]
 pub struct Aes192(());
 
-impl BlockEncrypt for Aes192 {
-    type EncryptionBlock = [u8; NB * WORD_SIZE];
-    type EncryptionKey = [u8; AES192_NK * WORD_SIZE];
+impl BlockCipher for Aes192 {
+    type Block = [u8; NB * WORD_SIZE];
+    type Key = [u8; AES192_NK * WORD_SIZE];
 
     fn encrypt(
         &self,
-        data: Plaintext<Self::EncryptionBlock>,
-        key: Key<Self::EncryptionKey>,
-    ) -> Ciphertext<Self::EncryptionBlock> {
+        data: Plaintext<Self::Block>,
+        key: Key<Self::Key>,
+    ) -> Ciphertext<Self::Block> {
         encrypt::<AES192_NK, AES192_NR, AES192_BLOCK_BYTES, AES192_KEY_BYTES, AES192_EXPANSION_BYTES>(
             data, key,
         )
     }
-}
-
-impl BlockDecrypt for Aes192 {
-    type DecryptionBlock = [u8; NB * WORD_SIZE];
-    type DecryptionKey = [u8; AES192_NK * WORD_SIZE];
 
     fn decrypt(
         &self,
-        data: Ciphertext<Self::DecryptionBlock>,
-        key: Key<Self::DecryptionKey>,
-    ) -> Plaintext<Self::DecryptionBlock> {
+        data: Ciphertext<Self::Block>,
+        key: Key<Self::Key>,
+    ) -> Plaintext<Self::Block> {
         decrypt::<AES192_NK, AES192_NR, AES192_BLOCK_BYTES, AES192_KEY_BYTES, AES192_EXPANSION_BYTES>(
             data, key,
         )
     }
 }
 
-impl BlockCipher for Aes192 {
-    type Block = [u8; NB * WORD_SIZE];
-    type Key = [u8; AES192_NK * WORD_SIZE];
-}
-
 /// [AES block cipher](self) with 256-bit keys.
 #[derive(Debug, Default)]
 pub struct Aes256(());
 
-impl BlockEncrypt for Aes256 {
-    type EncryptionBlock = [u8; NB * WORD_SIZE];
-    type EncryptionKey = [u8; AES256_NK * WORD_SIZE];
+impl BlockCipher for Aes256 {
+    type Block = [u8; NB * WORD_SIZE];
+    type Key = [u8; AES256_NK * WORD_SIZE];
 
     fn encrypt(
         &self,
-        data: Plaintext<Self::EncryptionBlock>,
-        key: Key<Self::EncryptionKey>,
-    ) -> Ciphertext<Self::EncryptionBlock> {
+        data: Plaintext<Self::Block>,
+        key: Key<Self::Key>,
+    ) -> Ciphertext<Self::Block> {
         encrypt::<AES256_NK, AES256_NR, AES256_BLOCK_BYTES, AES256_KEY_BYTES, AES256_EXPANSION_BYTES>(
             data, key,
         )
     }
-}
-
-impl BlockDecrypt for Aes256 {
-    type DecryptionBlock = [u8; NB * WORD_SIZE];
-    type DecryptionKey = [u8; AES256_NK * WORD_SIZE];
 
     fn decrypt(
         &self,
-        data: Ciphertext<Self::DecryptionBlock>,
-        key: Key<Self::DecryptionKey>,
-    ) -> Plaintext<Self::DecryptionBlock> {
+        data: Ciphertext<Self::Block>,
+        key: Key<Self::Key>,
+    ) -> Plaintext<Self::Block> {
         decrypt::<AES256_NK, AES256_NR, AES256_BLOCK_BYTES, AES256_KEY_BYTES, AES256_EXPANSION_BYTES>(
             data, key,
         )
     }
-}
-
-impl BlockCipher for Aes256 {
-    type Block = [u8; NB * WORD_SIZE];
-    type Key = [u8; AES256_NK * WORD_SIZE];
 }
 
 /// AES encryption routine defined in Section 5.1 of the AES specification.

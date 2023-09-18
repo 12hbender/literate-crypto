@@ -5,20 +5,7 @@ use {
 
 mod block;
 
-pub use block::{
-    aes,
-    Aes128,
-    Aes192,
-    Aes256,
-    BlockCipher,
-    BlockDecrypt,
-    BlockEncrypt,
-    BlockMode,
-    Cbc,
-    Ecb,
-    Padding,
-    Pkcs7,
-};
+pub use block::{aes, Aes128, Aes192, Aes256, BlockCipher, BlockMode, Cbc, Ecb, Padding, Pkcs7};
 
 /// A cipher encrypts and decrypts data of arbitrary length using a symmetric
 /// key.
