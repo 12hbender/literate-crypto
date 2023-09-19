@@ -1,11 +1,9 @@
-use crate::Bytes;
-
 /// Cryptographically secure pseudorandom number generator.
 ///
 /// TODO Explain what this means and how it's different from a regular PRNG.
 pub trait Csprng {
     // TODO Explain why this (mostly performance)
-    type Output: Bytes;
+    type Output;
 
     fn next(&mut self) -> Self::Output;
 }

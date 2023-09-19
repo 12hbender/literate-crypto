@@ -1,21 +1,18 @@
-use {
-    crate::{Bytes, Hash},
-    std::fmt,
-};
+use crate::Hash;
 
 mod daviesmeyer;
 
-pub use daviesmeyer::{DaviesMeyer, DaviesMeyerCipher, DaviesMeyerStep};
+pub use daviesmeyer::{DaviesMeyer, DaviesMeyerStep};
 
 // TODO The Merkle-Damgard construction
+#[derive(Debug)]
 pub struct MerkleDamgard<
     State,
     Block,
-    BuildF: Fn() -> F,
     F: CompressionFn<State = State, Block = Block>,
     Pad: MerkleDamgardPad<Block = Block>,
 > {
-    f: BuildF,
+    f: F,
     pad: Pad,
     iv: State,
 }
@@ -25,7 +22,7 @@ pub trait CompressionFn {
     type Block;
     type State;
 
-    fn compress(&mut self, state: Self::State, block: Self::Block) -> Self::State;
+    fn compress(&self, state: Self::State, block: Self::Block) -> Self::State;
 }
 
 // TODO MD-compliant padding
@@ -38,12 +35,11 @@ pub trait MerkleDamgardPad {
 impl<
         State,
         Block,
-        BuildF: Fn() -> F,
         F: CompressionFn<State = State, Block = Block>,
         Pad: MerkleDamgardPad<Block = Block>,
-    > MerkleDamgard<State, Block, BuildF, F, Pad>
+    > MerkleDamgard<State, Block, F, Pad>
 {
-    pub fn new(f: BuildF, pad: Pad, iv: State) -> Self {
+    pub fn new(f: F, pad: Pad, iv: State) -> Self {
         Self { f, pad, iv }
     }
 }
@@ -52,30 +48,15 @@ impl<
 impl<
         State: Clone,
         Block,
-        BuildF: Fn() -> F,
         F: CompressionFn<State = State, Block = Block>,
         Pad: MerkleDamgardPad<Block = Block>,
-    > Hash for MerkleDamgard<State, Block, BuildF, F, Pad>
+    > Hash for MerkleDamgard<State, Block, F, Pad>
 {
     type Output = State;
 
     fn hash(&self, input: &[u8]) -> Self::Output {
-        let mut f = (self.f)();
-        self.pad
-            .pad(input)
-            .fold(self.iv.clone(), |state, block| f.compress(state, block))
-    }
-}
-
-impl<
-        State: Bytes,
-        Block: Bytes,
-        BuildF: Fn() -> F,
-        F: CompressionFn<State = State, Block = Block>,
-        Pad: MerkleDamgardPad<Block = Block>,
-    > fmt::Debug for MerkleDamgard<State, Block, BuildF, F, Pad>
-{
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("MerkleDamgard").finish()
+        self.pad.pad(input).fold(self.iv.clone(), |state, block| {
+            self.f.compress(state, block)
+        })
     }
 }

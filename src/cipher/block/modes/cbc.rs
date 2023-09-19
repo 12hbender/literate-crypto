@@ -1,7 +1,7 @@
 use {
-    crate::{BlockCipher, BlockMode, Bytes, Cipher, Ciphertext, Key, Padding, Plaintext},
+    crate::{BlockCipher, BlockMode, Cipher, Ciphertext, Key, Padding, Plaintext},
     docext::docext,
-    std::mem::size_of,
+    std::{fmt, mem::size_of},
 };
 
 /// Cipher block chaining mode, the most common [mode of
@@ -44,22 +44,31 @@ impl<Cip: BlockCipher, Pad: Padding> Cbc<Cip, Pad> {
     }
 }
 
-impl<Cip: BlockCipher, Pad: Padding> Cipher for Cbc<Cip, Pad> {
+impl<Cip: BlockCipher, Pad: Padding> Cipher for Cbc<Cip, Pad>
+where
+    Cip::Block: for<'a> TryFrom<&'a mut [u8], Error: fmt::Debug>
+        + AsRef<[u8]>
+        + AsMut<[u8]>
+        + IntoIterator<Item = u8>
+        + Clone,
+    Cip::Key: Clone,
+{
     type Err = Pad::Err;
     type Key = Cip::Key;
 
     fn encrypt(&self, data: Plaintext<Vec<u8>>, key: Key<Self::Key>) -> Ciphertext<Vec<u8>> {
         let block_size = size_of::<Cip::Block>();
-        let mut prev = Ciphertext(self.iv);
+        let mut prev = Ciphertext(self.iv.clone());
         let mut data = self.pad.pad(data, block_size);
         // Encrypt the blocks in-place, using the input vector.
         for chunk in data.0.chunks_mut(block_size) {
             let mut block: Cip::Block = chunk.try_into().unwrap();
             block
+                .as_mut()
                 .iter_mut()
                 .zip(prev.0.into_iter())
                 .for_each(|(a, b)| *a ^= b);
-            let ciphertext = self.cip.encrypt(Plaintext(block), key);
+            let ciphertext = self.cip.encrypt(Plaintext(block), key.clone());
             chunk.copy_from_slice(ciphertext.0.as_ref());
             prev = ciphertext;
         }
@@ -72,11 +81,11 @@ impl<Cip: BlockCipher, Pad: Padding> Cipher for Cbc<Cip, Pad> {
         key: Key<Self::Key>,
     ) -> Result<Plaintext<Vec<u8>>, Self::Err> {
         let block_size = size_of::<Cip::Block>();
-        let mut prev = Ciphertext(self.iv);
+        let mut prev = Ciphertext(self.iv.clone());
         // Decrypt the blocks in-place, using the input vector.
         for chunk in data.0.chunks_mut(block_size) {
             let block = Ciphertext(chunk.try_into().unwrap());
-            let mut plaintext = self.cip.decrypt(block, key);
+            let mut plaintext = self.cip.decrypt(block.clone(), key.clone());
             plaintext
                 .0
                 .as_mut()
@@ -90,4 +99,13 @@ impl<Cip: BlockCipher, Pad: Padding> Cipher for Cbc<Cip, Pad> {
     }
 }
 
-impl<Cip: BlockCipher, Pad: Padding> BlockMode for Cbc<Cip, Pad> {}
+impl<Cip: BlockCipher, Pad: Padding> BlockMode for Cbc<Cip, Pad>
+where
+    Cip::Block: for<'a> TryFrom<&'a mut [u8], Error: fmt::Debug>
+        + AsRef<[u8]>
+        + AsMut<[u8]>
+        + IntoIterator<Item = u8>
+        + Clone,
+    Cip::Key: Clone,
+{
+}

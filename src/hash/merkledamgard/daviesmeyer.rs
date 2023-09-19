@@ -1,9 +1,9 @@
-use crate::{BlockCipher, CompressionFn, Key, Plaintext};
+use crate::{BlockEncrypt, CompressionFn, Key, Plaintext};
 
 // TODO Davies-Meyer construction
 #[derive(Debug)]
-pub struct DaviesMeyer<Cip, Step> {
-    cip: Cip,
+pub struct DaviesMeyer<Enc, Step> {
+    enc: Enc,
     step: Step,
 }
 
@@ -17,40 +17,24 @@ pub trait DaviesMeyerStep {
     fn step(&self, prev: Self::State, new: Self::State) -> Self::State;
 }
 
-impl<Cip, Step> DaviesMeyer<Cip, Step> {
-    pub fn new(cip: Cip, step: Step) -> Self {
-        Self { cip, step }
+impl<Enc, Step> DaviesMeyer<Enc, Step> {
+    pub fn new(enc: Enc, step: Step) -> Self {
+        Self { enc, step }
     }
 }
 
-// TODO Explain this, and difference between this and BlockCipher
-// This one does not need to be as secure
-pub trait DaviesMeyerCipher {
-    type Block;
-    type State;
-
-    fn encrypt(&mut self, state: Self::State, block: Self::Block) -> Self::State;
-}
-
-impl<Cip: BlockCipher> DaviesMeyerCipher for Cip {
-    type Block = Cip::Key;
-    type State = Cip::Block;
-
-    fn encrypt(&mut self, state: Self::State, block: Self::Block) -> Self::State {
-        Cip::encrypt(self, Plaintext(state), Key(block)).0
-    }
-}
-
-impl<Cip: DaviesMeyerCipher, Step: DaviesMeyerStep<State = Cip::State>> CompressionFn
-    for DaviesMeyer<Cip, Step>
+impl<Enc: BlockEncrypt, Step: DaviesMeyerStep<State = Enc::EncryptionBlock>> CompressionFn
+    for DaviesMeyer<Enc, Step>
 where
-    Cip::State: Clone,
+    Enc::EncryptionBlock: Clone,
 {
-    type Block = Cip::Block;
-    type State = Cip::State;
+    type Block = Enc::EncryptionKey;
+    type State = Enc::EncryptionBlock;
 
-    fn compress(&mut self, state: Self::State, block: Self::Block) -> Self::State {
-        self.step
-            .step(state.clone(), self.cip.encrypt(state, block))
+    fn compress(&self, state: Self::State, block: Self::Block) -> Self::State {
+        self.step.step(
+            state.clone(),
+            self.enc.encrypt(Plaintext(state), Key(block)).0,
+        )
     }
 }

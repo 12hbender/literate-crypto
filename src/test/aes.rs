@@ -1,6 +1,6 @@
 //! AES test vectors, from the specification.
 
-use crate::{Aes128, Aes192, Aes256, BlockCipher, Ciphertext, Key, Plaintext};
+use crate::{Aes128, Aes192, Aes256, BlockDecrypt, BlockEncrypt, Ciphertext, Key, Plaintext};
 
 #[test]
 pub fn encrypt_128() {

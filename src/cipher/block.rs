@@ -1,4 +1,4 @@
-use crate::{Bytes, Ciphertext, Key, Plaintext};
+use crate::{Ciphertext, Key, Plaintext};
 
 pub mod aes;
 mod modes;
@@ -19,15 +19,34 @@ pub use {
 ///
 /// The encrypt and decrypt methods must fulfill the same contract as those in
 /// the [`crate::Cipher`] trait.
-pub trait BlockCipher {
-    type Block: Bytes;
-    type Key: Bytes;
+pub trait BlockCipher:
+    BlockEncrypt<EncryptionBlock = Self::Block, EncryptionKey = Self::Key>
+    + BlockDecrypt<DecryptionBlock = Self::Block, DecryptionKey = Self::Key>
+{
+    type Block;
+    type Key;
+}
+
+pub trait BlockEncrypt {
+    type EncryptionBlock;
+    type EncryptionKey;
 
     /// Encrypt the plaintext.
-    fn encrypt(&self, data: Plaintext<Self::Block>, key: Key<Self::Key>)
-        -> Ciphertext<Self::Block>;
+    fn encrypt(
+        &self,
+        data: Plaintext<Self::EncryptionBlock>,
+        key: Key<Self::EncryptionKey>,
+    ) -> Ciphertext<Self::EncryptionBlock>;
+}
+
+pub trait BlockDecrypt {
+    type DecryptionBlock;
+    type DecryptionKey;
 
     /// Decrypt the ciphertext.
-    fn decrypt(&self, data: Ciphertext<Self::Block>, key: Key<Self::Key>)
-        -> Plaintext<Self::Block>;
+    fn decrypt(
+        &self,
+        data: Ciphertext<Self::DecryptionBlock>,
+        key: Key<Self::DecryptionKey>,
+    ) -> Plaintext<Self::DecryptionBlock>;
 }

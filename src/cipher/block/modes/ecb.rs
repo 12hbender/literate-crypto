@@ -1,4 +1,7 @@
-use crate::{BlockCipher, BlockMode, Cipher, Ciphertext, Key, Padding, Plaintext};
+use {
+    crate::{BlockCipher, BlockMode, Cipher, Ciphertext, Key, Padding, Plaintext},
+    std::fmt,
+};
 
 /// Electronic codebook mode, a simple and insecure [mode of
 /// operation](crate::BlockMode).
@@ -25,7 +28,11 @@ impl<Cip: BlockCipher, Pad: Padding> Ecb<Cip, Pad> {
 }
 
 // TODO Do the encryption and decryption in place. This is the best design.
-impl<Cip: BlockCipher, Pad: Padding> Cipher for Ecb<Cip, Pad> {
+impl<Cip: BlockCipher, Pad: Padding> Cipher for Ecb<Cip, Pad>
+where
+    Cip::Block: for<'a> TryFrom<&'a mut [u8], Error: fmt::Debug> + AsRef<[u8]>,
+    Cip::Key: Clone,
+{
     type Err = Pad::Err;
     type Key = Cip::Key;
 
@@ -35,7 +42,7 @@ impl<Cip: BlockCipher, Pad: Padding> Cipher for Ecb<Cip, Pad> {
         let mut data = self.pad.pad(data, block_size);
         for chunk in data.0.chunks_mut(block_size) {
             let block = Plaintext(chunk.try_into().unwrap());
-            chunk.copy_from_slice(self.cip.encrypt(block, key).0.as_ref());
+            chunk.copy_from_slice(self.cip.encrypt(block, key.clone()).0.as_ref());
         }
         Ciphertext(data.0)
     }
@@ -49,10 +56,15 @@ impl<Cip: BlockCipher, Pad: Padding> Cipher for Ecb<Cip, Pad> {
         let block_size = std::mem::size_of::<Cip::Block>();
         for chunk in data.0.chunks_mut(block_size) {
             let block = Ciphertext(chunk.try_into().unwrap());
-            chunk.copy_from_slice(self.cip.decrypt(block, key).0.as_ref());
+            chunk.copy_from_slice(self.cip.decrypt(block, key.clone()).0.as_ref());
         }
         self.pad.unpad(Plaintext(data.0), block_size)
     }
 }
 
-impl<Cip: BlockCipher, Pad: Padding> BlockMode for Ecb<Cip, Pad> {}
+impl<Cip: BlockCipher, Pad: Padding> BlockMode for Ecb<Cip, Pad>
+where
+    Cip::Block: for<'a> TryFrom<&'a mut [u8], Error: fmt::Debug> + AsRef<[u8]>,
+    Cip::Key: Clone,
+{
+}

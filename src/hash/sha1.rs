@@ -1,38 +1,48 @@
 use {
     crate::{
+        BlockEncrypt,
+        Ciphertext,
         DaviesMeyer,
-        DaviesMeyerCipher,
         DaviesMeyerStep,
         Hash,
+        Key,
         MerkleDamgard,
         MerkleDamgardPad,
+        Plaintext,
     },
     std::iter,
 };
 
-// Block size in bytes.
 const BLOCK_BYTES: usize = 64;
 
 type State = [u32; 5];
 
-#[derive(Debug, Default)]
-pub struct Sha1(());
+type Block = [u8; BLOCK_BYTES];
+
+#[derive(Debug)]
+pub struct Sha1(MerkleDamgard<State, Block, DaviesMeyer<Shacal1, Plus>, Sha1Pad>);
+
+impl Default for Sha1 {
+    fn default() -> Self {
+        Self(MerkleDamgard::new(
+            DaviesMeyer::new(Shacal1(()), Plus(())),
+            Sha1Pad(()),
+            [0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476, 0xc3d2e1f0],
+        ))
+    }
+}
 
 impl Hash for Sha1 {
     type Output = [u8; 20];
 
     fn hash(&self, input: &[u8]) -> Self::Output {
         let mut result = [0; 20];
-        MerkleDamgard::new(
-            || DaviesMeyer::new(Shacal1(()), Plus(())),
-            Sha1Pad(()),
-            [0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476, 0xc3d2e1f0],
-        )
-        .hash(input)
-        .into_iter()
-        .flat_map(u32::to_be_bytes)
-        .zip(result.iter_mut())
-        .for_each(|(b, r)| *r = b);
+        self.0
+            .hash(input)
+            .into_iter()
+            .flat_map(u32::to_be_bytes)
+            .zip(result.iter_mut())
+            .for_each(|(b, r)| *r = b);
         result
     }
 }
@@ -40,13 +50,17 @@ impl Hash for Sha1 {
 #[derive(Debug)]
 struct Shacal1(());
 
-impl DaviesMeyerCipher for Shacal1 {
-    type Block = [u8; BLOCK_BYTES];
-    type State = State;
+impl BlockEncrypt for Shacal1 {
+    type EncryptionBlock = State;
+    type EncryptionKey = Block;
 
-    fn encrypt(&mut self, state: Self::State, block: Self::Block) -> Self::State {
-        // TODO What did I spend my whole day on? Now I think I can go back to
-        // BlockEncrypt + BlockDecrypt and make it stateless
+    fn encrypt(
+        &self,
+        data: Plaintext<Self::EncryptionBlock>,
+        key: Key<Self::EncryptionKey>,
+    ) -> Ciphertext<Self::EncryptionBlock> {
+        let state = data.0;
+        let block = key.0;
 
         // Initialize the message schedule.
         let mut schedule = [0; 16];
@@ -103,11 +117,12 @@ impl DaviesMeyerCipher for Shacal1 {
         }
 
         println!();
-        [a, b, c, d, e]
+        Ciphertext([a, b, c, d, e])
     }
 }
 
 // TODO The davies-meyer step in SHA1 is modular addition
+#[derive(Debug)]
 struct Plus(());
 
 impl DaviesMeyerStep for Plus {
@@ -128,7 +143,7 @@ impl DaviesMeyerStep for Plus {
 struct Sha1Pad(());
 
 impl MerkleDamgardPad for Sha1Pad {
-    type Block = [u8; BLOCK_BYTES];
+    type Block = Block;
 
     fn pad(&self, input: &[u8]) -> impl Iterator<Item = Self::Block> {
         input

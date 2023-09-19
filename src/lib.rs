@@ -1,5 +1,6 @@
 #![feature(return_position_impl_trait_in_trait)]
 #![feature(array_chunks)]
+#![feature(associated_type_bounds)]
 #![forbid(unsafe_code)]
 
 #[cfg(test)]
@@ -8,7 +9,6 @@ mod test;
 #[cfg(doc)]
 pub mod doc;
 
-mod bytes;
 mod cipher;
 mod hash;
 mod key;
@@ -17,13 +17,14 @@ mod text;
 mod util;
 
 pub use {
-    bytes::Bytes,
     cipher::{
         aes,
         Aes128,
         Aes192,
         Aes256,
         BlockCipher,
+        BlockDecrypt,
+        BlockEncrypt,
         BlockMode,
         Cbc,
         Cipher,
@@ -35,7 +36,6 @@ pub use {
         sha3,
         CompressionFn,
         DaviesMeyer,
-        DaviesMeyerCipher,
         DaviesMeyerStep,
         Hash,
         MerkleDamgard,

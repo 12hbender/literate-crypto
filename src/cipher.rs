@@ -1,11 +1,24 @@
 use {
-    crate::{Bytes, Ciphertext, Key, Plaintext},
+    crate::{Ciphertext, Key, Plaintext},
     docext::docext,
 };
 
 mod block;
 
-pub use block::{aes, Aes128, Aes192, Aes256, BlockCipher, BlockMode, Cbc, Ecb, Padding, Pkcs7};
+pub use block::{
+    aes,
+    Aes128,
+    Aes192,
+    Aes256,
+    BlockCipher,
+    BlockDecrypt,
+    BlockEncrypt,
+    BlockMode,
+    Cbc,
+    Ecb,
+    Padding,
+    Pkcs7,
+};
 
 /// A cipher encrypts and decrypts data of arbitrary length using a symmetric
 /// key.
@@ -25,7 +38,7 @@ pub use block::{aes, Aes128, Aes192, Aes256, BlockCipher, BlockMode, Cbc, Ecb, P
 #[docext]
 pub trait Cipher {
     type Err;
-    type Key: Bytes;
+    type Key;
 
     /// Encrypt the plaintext.
     fn encrypt(&self, data: Plaintext<Vec<u8>>, key: Key<Self::Key>) -> Ciphertext<Vec<u8>>;

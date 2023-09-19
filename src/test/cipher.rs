@@ -6,6 +6,7 @@
 
 use {
     crate::{Aes128, Aes192, Aes256, Cbc, Cipher, Ecb, Key, Pkcs7, Plaintext},
+    core::fmt,
     rand::Rng,
 };
 
@@ -66,16 +67,17 @@ fn aes_256_cbc_pkcs7() {
 /// ```
 fn test<Cip: Cipher>(cip: Cip, data_size: usize)
 where
-    Cip::Err: std::fmt::Debug,
+    Cip::Key: for<'a> TryFrom<&'a [u8]> + fmt::Debug + Clone,
+    Cip::Err: fmt::Debug,
 {
     let data: Plaintext<Vec<u8>> =
         Plaintext((0..data_size).map(|_| rand::thread_rng().gen()).collect());
     let key_size = std::mem::size_of::<Cip::Key>();
     let key: Vec<u8> = (0..key_size).map(|_| rand::thread_rng().gen()).collect();
-    let key = Key(Cip::Key::try_from(key.as_slice()).unwrap());
+    let key = Key(Cip::Key::try_from(key.as_slice()).unwrap_or_else(|_| unreachable!()));
 
-    let ciphertext = cip.encrypt(data.clone(), key);
-    let plaintext = cip.decrypt(ciphertext.clone(), key).unwrap();
+    let ciphertext = cip.encrypt(data.clone(), key.clone());
+    let plaintext = cip.decrypt(ciphertext.clone(), key.clone()).unwrap();
 
     assert_eq!(
         data, plaintext,
