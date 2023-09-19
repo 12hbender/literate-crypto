@@ -1,10 +1,10 @@
 mod merkledamgard;
-pub mod sha1;
+pub mod sha2;
 pub mod sha3;
 
 pub use {
     merkledamgard::{CompressionFn, DaviesMeyer, DaviesMeyerStep, MerkleDamgard, MerkleDamgardPad},
-    sha1::Sha1,
+    sha2::{Sha1, Sha256},
     sha3::{Sha3_224, Sha3_256, Sha3_384, Sha3_512},
 };
 

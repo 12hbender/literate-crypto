@@ -1,6 +1,6 @@
 use {super::test, crate::Sha1};
 
-/// SHA1 test vectors.
+/// SHA-1 test vectors.
 #[test]
 fn sha1() {
     let hash = Sha1::default();

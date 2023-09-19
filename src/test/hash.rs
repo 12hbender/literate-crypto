@@ -1,6 +1,7 @@
 use {crate::Hash, std::fmt};
 
 mod sha1;
+mod sha2;
 mod sha3;
 
 fn test<H: Hash>(hash: &H, input: &[u8], output: &[u8])
