@@ -17,7 +17,9 @@
 //! the size of the internal state. The capacity is important for security, and
 //! if it is too small, the hash function becomes vulnerable to attacks.
 //!
-//! The SHA-3 hash is specified in [FIPS 202](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf).
+//! The internal permutation of the algorithm is [Keccak-p](keccak_p).
+//!
+//! The SHA-3 algorithm is specified in [FIPS 202](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf).
 
 use {super::Hash, crate::util::IterChunks, docext::docext, std::iter};
 
@@ -89,7 +91,7 @@ pub const NUM_ROUNDS: usize = 24;
 #[docext]
 pub type State = [[u64; NUM_COLS]; NUM_ROWS];
 
-/// The offsets used by the $\rho$ step.
+/// Offsets used by the $\rho$ step.
 #[docext]
 pub const RHO_OFFSETS: [[u32; NUM_COLS]; NUM_ROWS] = [
     [0, 1, 190, 28, 91],
@@ -211,18 +213,17 @@ pub fn keccak_p(state: &mut State) {
 /// z \in \\{0, 1, \dots, 63\\}
 /// $$
 ///
-/// The only interesting bit is that $D_{\dots, \space z}$ is computed using
+/// The interesting bit is that $D_{\dots, \space z}$ is computed using
 /// $C_{\dots, \space z - 1 \pmod{64}}$. The $z - 1 \pmod{64}$ represents a
 /// rotation of the word by one bit to the right. However, due to the specific
 /// bit convention used by SHA-3 (described in Section B.1 of the
 /// specification — essentially, the bit order in the specification is left to
 /// right, whereas computers order bits right to left, the rightmost bit being
-/// the least significant), this rotation is actually a rotation to the left:
+/// the least significant), this rotation is actually to the left:
 ///
 /// $$
 /// D_{x} = C_{x - 1 \pmod{5}} \oplus \mathrm{ROTL}(C_{x + 1 \pmod{5}}),\newline
-/// x \in \\{0, 1, \dots, 4\\},
-/// z \in \\{0, 1, \dots, 63\\}
+/// x \in \\{0, 1, \dots, 4\\}
 /// $$
 ///
 /// Where $\mathrm{ROTL}$ is the left rotation by one bit.
@@ -244,10 +245,9 @@ pub fn keccak_p(state: &mut State) {
 /// be inlined:
 ///
 /// $$
-/// A_{x, y}^{\prime} = A_{x, y} \oplus C_{x - 1 \pmod{5}} \oplus
+/// A_{x, y} \gets A_{x, y} \oplus C_{x - 1 \pmod{5}} \oplus
 /// \mathrm{ROTL}(C_{x + 1 \pmod{5}}),\newline
 /// x, y \in \\{0, 1, \dots, 4\\},\newline
-/// A \gets A^{\prime}
 /// $$
 #[docext]
 #[allow(clippy::needless_range_loop)]
@@ -270,12 +270,12 @@ pub fn theta(state: &mut State) {
 
 /// The $\rho$ step specified in Section 3.2.2 of the specification.
 ///
-/// This step rotates each word in the state by a fixed amount of bits, encoded
+/// This step rotates each word in the state by a fixed number of bits, encoded
 /// in the [`RHO_OFFSETS`](RHO_OFFSETS) table, referred to as $\rho$.
 ///
 /// $$
-/// A_{x, y, z} \gets A_{x, y, z - \rho(x, y)} \Rightarrow
-/// A_{x, y} \gets \mathrm{ROTL}(A_{x, y}, \rho(x, y)),\newline
+/// A_{x, y, z} \gets A_{x, \space y, \space z - \rho(x, y) \pmod{64}}
+/// \Rightarrow A_{x, y} \gets \mathrm{ROTL}(A_{x, y}, \rho(x, y)),\newline
 /// x, y \in \\{0, 1, \dots, 4\\},
 /// z \in \\{0, 1, \dots, 63\\}
 /// $$
@@ -297,8 +297,8 @@ pub fn rho(state: &mut State) {
 /// Shuffles the words in the state:
 ///
 /// $$
-/// A_{x, y, z}^{\prime} = A_{(x + 3y) \pmod{5}, \space x, \space z},
-/// \Rightarrow A_{x, y}^{\prime} = A_{(x + 3y) \pmod{5}, \space x}, \newline
+/// A_{x, y, z}^{\prime} = A_{x + 3y \pmod{5}, \space x, \space z},
+/// \Rightarrow A_{x, y}^{\prime} = A_{x + 3y \pmod{5}, \space x}, \newline
 /// x, y \in \\{0, 1, \dots, 4\\},
 /// z \in \\{0, 1, \dots, 63\\},\newline
 /// A \gets A^{\prime}
@@ -319,8 +319,8 @@ pub fn pi(state: &mut State) {
 /// Adds nonlinearity by applying a binary AND operation to words:
 ///
 /// $$
-/// A_{x, y, z}^{\prime} = A_{x, y, z} \oplus ((A_{(x+1) \pmod{5}, \space y,
-/// \space z} \oplus 1) \cdot A_{(x+2) \pmod{5}, \space y, \space z}),\newline
+/// A_{x, y, z}^{\prime} = A_{x, y, z} \oplus ((A_{x+1 \pmod{5}, \space y,
+/// \space z} \oplus 1) \cdot A_{x+2 \pmod{5}, \space y, \space z}),\newline
 /// x, y \in \\{0, 1, \dots, 4\\},
 /// z \in \\{0, 1, \dots, 63\\}
 /// $$
@@ -329,8 +329,8 @@ pub fn pi(state: &mut State) {
 /// bitwise NOT of bit $b$, hence we can apply the above to words as follows:
 ///
 /// $$
-/// A_{x, y}^{\prime} = A_{x, y} \oplus ((\mathrm{NOT}(A_{(x+1) \pmod{5}, \space
-/// y })) \cdot A_{(x+2) \pmod{5}, \space y}) \newline
+/// A_{x, y}^{\prime} = A_{x, y} \oplus ((\mathrm{NOT}(A_{x+1 \pmod{5}, \space
+/// y })) \cdot A_{x+2 \pmod{5}, \space y}) \newline
 /// x, y \in \\{0, 1, \dots, 4\\},\newline
 /// A \gets A^{\prime}
 /// $$
