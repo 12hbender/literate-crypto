@@ -11,7 +11,6 @@ pub mod doc;
 
 mod cipher;
 mod hash;
-mod key;
 mod random;
 mod text;
 mod util;
@@ -29,6 +28,7 @@ pub use {
         Cbc,
         Cipher,
         Ecb,
+        Key,
         Padding,
         Pkcs7,
     },
@@ -41,11 +41,12 @@ pub use {
         MerkleDamgard,
         MerkleDamgardPad,
         Sha1,
+        Sha224,
+        Sha256,
         Sha3_224,
         Sha3_256,
         Sha3_384,
         Sha3_512,
     },
-    key::Key,
     text::{Ciphertext, Plaintext},
 };

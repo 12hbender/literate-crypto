@@ -4,7 +4,7 @@ pub mod sha3;
 
 pub use {
     merkledamgard::{CompressionFn, DaviesMeyer, DaviesMeyerStep, MerkleDamgard, MerkleDamgardPad},
-    sha2::{Sha1, Sha256},
+    sha2::{Sha1, Sha224, Sha256},
     sha3::{Sha3_224, Sha3_256, Sha3_384, Sha3_512},
 };
 

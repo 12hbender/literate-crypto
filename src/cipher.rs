@@ -1,23 +1,27 @@
 use {
-    crate::{Ciphertext, Key, Plaintext},
+    crate::{Ciphertext, Plaintext},
     docext::docext,
 };
 
 mod block;
+mod key;
 
-pub use block::{
-    aes,
-    Aes128,
-    Aes192,
-    Aes256,
-    BlockCipher,
-    BlockDecrypt,
-    BlockEncrypt,
-    BlockMode,
-    Cbc,
-    Ecb,
-    Padding,
-    Pkcs7,
+pub use {
+    block::{
+        aes,
+        Aes128,
+        Aes192,
+        Aes256,
+        BlockCipher,
+        BlockDecrypt,
+        BlockEncrypt,
+        BlockMode,
+        Cbc,
+        Ecb,
+        Padding,
+        Pkcs7,
+    },
+    key::Key,
 };
 
 /// A cipher encrypts and decrypts data of arbitrary length using a symmetric

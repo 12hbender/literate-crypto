@@ -43,6 +43,11 @@ pub struct Sha256(
 );
 
 #[derive(Debug)]
+pub struct Sha224(
+    MerkleDamgard<Sha2State, Block, DaviesMeyer<Shacal2, Plus<Sha2State>>, LengthPadding>,
+);
+
+#[derive(Debug)]
 struct Shacal1(());
 
 #[derive(Debug)]
@@ -91,6 +96,34 @@ impl Hash for Sha256 {
 
     fn hash(&self, input: &[u8]) -> Self::Output {
         let mut result = [0; 32];
+        self.0
+            .hash(input)
+            .into_iter()
+            .flat_map(u32::to_be_bytes)
+            .zip(result.iter_mut())
+            .for_each(|(b, r)| *r = b);
+        result
+    }
+}
+
+impl Default for Sha224 {
+    fn default() -> Self {
+        Self(MerkleDamgard::new(
+            DaviesMeyer::new(Shacal2(()), Plus(Default::default())),
+            LengthPadding(()),
+            [
+                0xc1059ed8, 0x367cd507, 0x3070dd17, 0xf70e5939, 0xffc00b31, 0x68581511, 0x64f98fa7,
+                0xbefa4fa4,
+            ],
+        ))
+    }
+}
+
+impl Hash for Sha224 {
+    type Output = [u8; 28];
+
+    fn hash(&self, input: &[u8]) -> Self::Output {
+        let mut result = [0; 28];
         self.0
             .hash(input)
             .into_iter()
