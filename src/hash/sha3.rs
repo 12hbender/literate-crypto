@@ -27,6 +27,8 @@ mod rctable;
 
 pub use rctable::rctable;
 
+use crate::{Digest, Preimage};
+
 /// [SHA-3 hash](self) with 224-bit output.
 #[derive(Debug, Default)]
 pub struct Sha3_224(());
@@ -34,8 +36,8 @@ pub struct Sha3_224(());
 impl Hash for Sha3_224 {
     type Output = [u8; 28];
 
-    fn hash(&self, input: &[u8]) -> Self::Output {
-        sponge::<144, 28>(input)
+    fn hash(&self, preimage: Preimage<&[u8]>) -> Digest<Self::Output> {
+        sponge::<144, 28>(preimage)
     }
 }
 
@@ -46,7 +48,7 @@ pub struct Sha3_256(());
 impl Hash for Sha3_256 {
     type Output = [u8; 32];
 
-    fn hash(&self, input: &[u8]) -> Self::Output {
+    fn hash(&self, input: Preimage<&[u8]>) -> Digest<Self::Output> {
         sponge::<136, 32>(input)
     }
 }
@@ -58,7 +60,7 @@ pub struct Sha3_384(());
 impl Hash for Sha3_384 {
     type Output = [u8; 48];
 
-    fn hash(&self, input: &[u8]) -> Self::Output {
+    fn hash(&self, input: Preimage<&[u8]>) -> Digest<Self::Output> {
         sponge::<104, 48>(input)
     }
 }
@@ -70,7 +72,7 @@ pub struct Sha3_512(());
 impl Hash for Sha3_512 {
     type Output = [u8; 64];
 
-    fn hash(&self, input: &[u8]) -> Self::Output {
+    fn hash(&self, input: Preimage<&[u8]>) -> Digest<Self::Output> {
         sponge::<72, 64>(input)
     }
 }
@@ -135,11 +137,11 @@ pub const RC: [u64; NUM_ROUNDS] = [
 /// and function [Keccak-p](keccak_p).
 ///
 /// This process is described in the [module documentation](self).
-pub fn sponge<const R: usize, const D: usize>(input: &[u8]) -> [u8; D] {
+pub fn sponge<const R: usize, const D: usize>(preimage: Preimage<&[u8]>) -> Digest<[u8; D]> {
     let mut state = State::default();
 
     // Absorbing phase.
-    for block in pad10star1::<R>(input) {
+    for block in pad10star1::<R>(preimage) {
         block
             .into_iter()
             .chain(iter::repeat(0))
@@ -157,7 +159,7 @@ pub fn sponge<const R: usize, const D: usize>(input: &[u8]) -> [u8; D] {
         .flat_map(|b| b.to_le_bytes())
         .zip(output.iter_mut())
         .for_each(|(s, r)| *r = s);
-    output
+    Digest(output)
 }
 
 /// The Keccak-p permutation specified in Section 3.3 of the specification.
@@ -370,12 +372,14 @@ pub fn iota(state: &mut State, ir: usize) {
 /// This is called the _domain separator_ and serves to disambiguate SHA-3's
 /// usage of Keccak-p from other uses of Keccak-p.
 #[docext]
-pub fn pad10star1<const R: usize>(data: &[u8]) -> impl Iterator<Item = [u8; R]> + '_ {
-    data.chunks(R)
+pub fn pad10star1<const R: usize>(preimage: Preimage<&[u8]>) -> impl Iterator<Item = [u8; R]> + '_ {
+    preimage
+        .0
+        .chunks(R)
         .chain(
             // If the data is a multiple of the block size, a full block of padding needs to be
             // added.
-            iter::once([].as_slice()).take(if data.len() % R == 0 { 1 } else { 0 }),
+            iter::once([].as_slice()).take(if preimage.0.len() % R == 0 { 1 } else { 0 }),
         )
         .map(|block| {
             if block.len() == R {

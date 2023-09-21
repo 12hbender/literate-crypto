@@ -27,6 +27,7 @@ pub trait BlockCipher:
     type Key;
 }
 
+/// The encryption half of a [block cipher](BlockCipher).
 pub trait BlockEncrypt {
     type EncryptionBlock;
     type EncryptionKey;
@@ -39,6 +40,7 @@ pub trait BlockEncrypt {
     ) -> Ciphertext<Self::EncryptionBlock>;
 }
 
+/// The decryption half of a [block cipher](BlockCipher).
 pub trait BlockDecrypt {
     type DecryptionBlock;
     type DecryptionKey;

@@ -7,13 +7,13 @@ use {
 /// Cipher block chaining mode, the most common [mode of
 /// operation](crate::BlockMode) for block ciphers.
 ///
-/// Given a block cipher $E_k$ with key $k$ and some plaintext $P = P_1 || P_2
-/// || \dots || P_n$, where $P_i$ are the plaintext blocks, CBC mode encrypts $P$ as
-/// follows:
+/// Given a block cipher $E_k$ with key $k$ and some plaintext $P = P_1
+/// \parallel P_2 \parallel \dots \parallel P_n$, where $P_i$ are the plaintext
+/// blocks, CBC mode encrypts $P$ as follows:
 ///
 /// $$
 /// C_i = E(P_i \oplus C_{i-1}),\newline
-/// C = C_1 || C_2 || \dots || C_n
+/// C = C_1 \parallel C_2 \parallel \dots \parallel C_n
 /// $$
 ///
 /// $C_0$ is a special value called the _initialization vector (IV)_.
