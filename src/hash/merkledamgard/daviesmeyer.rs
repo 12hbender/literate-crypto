@@ -31,9 +31,9 @@ pub struct DaviesMeyer<Enc, Step> {
 }
 
 /// The step function of the [Davies-Meyer](DaviesMeyer) construction defines
-/// how the previous hash state should be combined with the new hash state.
+/// how the previous hash state is combined with the new hash state.
 ///
-/// This should be a one-way function, meaning that it should be impossible to
+/// This must be a one-way function, meaning that it should be impossible to
 /// go back to a previous state given the current state. XOR is often used as
 /// the step function.
 pub trait DaviesMeyerStep {

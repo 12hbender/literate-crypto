@@ -1,4 +1,5 @@
-//! SHA-3 is a modern hash function.
+//! SHA-3 is a modern hash function specified by
+//! [FIPS 202](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf).
 //!
 //! SHA-3 is based on the [_sponge construction_](sponge). It keeps an internal
 //! state, splits the input data into blocks and processes them one by one,
@@ -18,8 +19,6 @@
 //! if it is too small, the hash function becomes vulnerable to attacks.
 //!
 //! The internal permutation of the algorithm is [Keccak-p](keccak_p).
-//!
-//! The SHA-3 algorithm is specified in [FIPS 202](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf).
 
 use {super::Hash, crate::util::IterChunks, docext::docext, std::iter};
 

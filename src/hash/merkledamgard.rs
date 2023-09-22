@@ -93,8 +93,8 @@ pub trait CompressionFn {
 /// The padding scheme used by the [Merkle-Damgard construction](MerkleDamgard).
 ///
 /// The padding scheme splits the hash input into blocks of fixed size,
-/// with padding. To be formally secure, the padding scheme $Pad$ must uphold
-/// the following contracts:
+/// with padding. To be formally secure ("Merkle-Damgard compliant"), the
+/// padding scheme $Pad$ must uphold the following contracts:
 ///
 /// 1. Given the message $M$, $M$ must be a prefix of $Pad(M)$.
 /// 2. Given two messages $M_1$ and $M_2$, if $len(M_1) = len(M_2)$, then

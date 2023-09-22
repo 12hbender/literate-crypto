@@ -1,6 +1,8 @@
 #![feature(return_position_impl_trait_in_trait)]
 #![feature(array_chunks)]
 #![feature(associated_type_bounds)]
+#![feature(proc_macro_hygiene)]
+#![feature(custom_inner_attributes)]
 #![forbid(unsafe_code)]
 
 #[cfg(test)]
@@ -33,6 +35,7 @@ pub use {
         Pkcs7,
     },
     hash::{
+        sha2,
         sha3,
         CompressionFn,
         DaviesMeyer,

@@ -1,3 +1,13 @@
+//! SHA-1 and SHA-2 are hash functions specified by [FIPS
+//! 180-4](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf).
+//!
+//! SHA-1 and SHA-2 are based on the [Merkle-Damgard](crate::MerkleDamgard) and
+//! [Davies-Meyer](crate::DaviesMeyer) constructions. This means that each
+//! hashing algorithm uses a block cipher internally, [SHACAL-1](Shacal1) and
+//! [SHACAL-2](Shacal2) respectively. The block ciphers are used to mix the
+//! internal state of the hash function with padded preimage blocks. The
+//! final state (optionally truncated to a smaller size) is the hash digest.
+
 use {
     crate::{
         BlockEncrypt,
@@ -12,10 +22,13 @@ use {
         Plaintext,
         Preimage,
     },
+    docext::docext,
     std::{iter, marker::PhantomData},
 };
 
-const KT_256: [u32; 64] = [
+/// The $K_t^{256}$ constants for [SHA-256](Sha256).
+#[docext]
+pub const KT_256: [u32; 64] = [
     0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
     0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
     0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
@@ -26,39 +39,155 @@ const KT_256: [u32; 64] = [
     0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2,
 ];
 
-const BLOCK_BYTES: usize = 64;
+pub const BLOCK_BYTES: usize = 64;
 
-type Block = [u8; BLOCK_BYTES];
+/// A preimage block.
+pub type Block = [u8; BLOCK_BYTES];
 
-type Sha1State = [u32; 5];
+/// The internal state of [SHA-1](Sha1).
+pub type Sha1State = [u32; 5];
 
-type Sha2State = [u32; 8];
+/// The internal state of [SHA-256](Sha256) and [SHA-224](Sha224).
+pub type Sha2State = [u32; 8];
 
+/// SHA-1 hash specified by [FIPS
+/// 180-4](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf).
+///
+/// Note that this is a weak hash function with known vulnerabilities, and
+/// should be avoided in practice. It is also vulnerable to [length-extension
+/// attacks](MerkleDamgard#length-extension-attacks).
+///
+/// For more details, see the [module documentation](self).
 #[derive(Debug)]
 pub struct Sha1(
-    MerkleDamgard<Sha1State, Block, DaviesMeyer<Shacal1, Plus<Sha1State>>, LengthPadding>,
+    MerkleDamgard<
+        Sha1State,
+        Block,
+        DaviesMeyer<Shacal1, ModularAddition<Sha1State>>,
+        LengthPadding,
+    >,
 );
 
+/// SHA-256 hash specified by [FIPS
+/// 180-4](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf).
+///
+/// SHA-256 is vulnerable to [length-extension
+/// attacks](MerkleDamgard#length-extension-attacks).
+///
+/// For more details, see the [module documentation](self).
 #[derive(Debug)]
 pub struct Sha256(
-    MerkleDamgard<Sha2State, Block, DaviesMeyer<Shacal2, Plus<Sha2State>>, LengthPadding>,
+    MerkleDamgard<
+        Sha2State,
+        Block,
+        DaviesMeyer<Shacal2, ModularAddition<Sha2State>>,
+        LengthPadding,
+    >,
 );
 
+/// SHA-224 hash specified by [FIPS
+/// 180-4](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf).
+///
+/// SHA-224 is the same as [SHA-256](Sha256), with the hash digest truncated to
+/// 224 bits. Due to the truncation, SHA-224 is not vulnerable to
+/// [length-extension attacks](MerkleDamgard#length-extension-attacks), unlike
+/// SHA-256.
+///
+/// For more details, see the [module documentation](self).
 #[derive(Debug)]
 pub struct Sha224(
-    MerkleDamgard<Sha2State, Block, DaviesMeyer<Shacal2, Plus<Sha2State>>, LengthPadding>,
+    MerkleDamgard<
+        Sha2State,
+        Block,
+        DaviesMeyer<Shacal2, ModularAddition<Sha2State>>,
+        LengthPadding,
+    >,
 );
 
+/// The underlying block cipher used by [SHA-1](Sha1).
+///
+/// Applies 80 rounds of the following permutation, where $a, b, c, \dots$
+/// represent the current state in 32-bit words, $W_i$ is the message
+/// schedule (described below), [$f_t$](ft) is a helper function, [$K_t$](kt)
+/// are the round constants, and the $\mathrm{ROTL}$ function is bitwise left
+/// rotation:
+///
+/// $$
+/// T = \mathrm{ROTL}(a, 5) + f_t(b, c, d) + e + K_t + W_0 \pmod{2^{32}}\newline
+/// e \gets d\newline
+/// d \gets c\newline
+/// c \gets \mathrm{ROTL}(b, 30)\newline
+/// b \gets a\newline
+/// a \gets T\newline
+/// $$
+///
+/// The message schedule $W$ is a 16 element array of 32-bit words. It is
+/// initialized to the current preimage block, and updated at the end of each
+/// round as follows:
+///
+/// $$
+/// T = \mathrm{ROTL}(W_{13} \oplus W_8 \oplus W_2 \oplus W_0, 1)\newline
+/// W_i \gets W_{i + 1}, \forall i \in \\{0, 1, \dots, 14\\}\newline
+/// W_{15} \gets T
+/// $$
+///
+/// Meaning, the entire array is shifted left, and then the last element is
+/// updated as a combination of the other elements.
+///
+/// There are well-known vulnerabilities applicable to SHACAL-1 with a reduced
+/// number of rounds.
+#[docext]
 #[derive(Debug)]
-struct Shacal1(());
+pub struct Shacal1(());
 
+/// The underlying block cipher used by [SHA-265](Sha256) and [SHA-224](Sha224).
+///
+/// Applies 64 rounds of the following permutation, where $a, b, c, \dots$
+/// represent the current state in 32-bit words, $W_i$ is the message
+/// schedule (described later), [$\Sigma_0^{256}$](uppercase_sigma_0),
+/// [$\Sigma_1^{256}$](uppercase_sigma_1),
+/// [$\sigma_0^{256}$](lowercase_sigma_0), [$\sigma_1^{256}$](lowercase_sigma_1)
+/// [$Ch$](ch), and [$Maj$](maj) are helper functions, and [$K_t^{256}$](KT_256)
+/// are the round constants:
+///
+/// $$
+/// T_1 = h + \Sigma_1^{256}(e) + Ch(e, f, g) + K_t^{256} + W_0
+/// \pmod{2^{32}}\newline
+/// T_2 = \Sigma_0^{256}(a) + Maj(a, b, c) \pmod{2^{32}}\newline
+/// h \gets g\newline
+/// g \gets f\newline
+/// f \gets e\newline
+/// e \gets d + T_1\newline
+/// d \gets c\newline
+/// c \gets b\newline
+/// b \gets a\newline
+/// a \gets T_1 + T_2
+/// $$
+///
+/// The message schedule $W$ is a 16 element array of 32-bit words. It is
+/// initialized to the current preimage block, and updated at the end of each
+/// round as follows:
+///
+/// $$
+/// T = \sigma_1^{256}(W_{14}) + W_9 + \sigma_0^{256}(W_1) + W_0
+/// \pmod{2^{32}}\newline
+/// W_i \gets W_{i + 1}, \forall i \in \\{0, 1, \dots, 14\\}\newline
+/// W_{15} \gets T
+/// $$
+///
+/// Meaning, the entire array is shifted left, and then the last element is
+/// updated as a combination of the other elements.
+///
+/// There are well-known vulnerabilities applicable to SHACAL-2 with a reduced
+/// number of rounds.
+#[docext]
 #[derive(Debug)]
-struct Shacal2(());
+pub struct Shacal2(());
 
 impl Default for Sha1 {
     fn default() -> Self {
         Self(MerkleDamgard::new(
-            DaviesMeyer::new(Shacal1(()), Plus(Default::default())),
+            DaviesMeyer::new(Shacal1(()), ModularAddition(Default::default())),
             LengthPadding(()),
             [0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476, 0xc3d2e1f0],
         ))
@@ -84,7 +213,7 @@ impl Hash for Sha1 {
 impl Default for Sha256 {
     fn default() -> Self {
         Self(MerkleDamgard::new(
-            DaviesMeyer::new(Shacal2(()), Plus(Default::default())),
+            DaviesMeyer::new(Shacal2(()), ModularAddition(Default::default())),
             LengthPadding(()),
             [
                 0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab,
@@ -113,7 +242,7 @@ impl Hash for Sha256 {
 impl Default for Sha224 {
     fn default() -> Self {
         Self(MerkleDamgard::new(
-            DaviesMeyer::new(Shacal2(()), Plus(Default::default())),
+            DaviesMeyer::new(Shacal2(()), ModularAddition(Default::default())),
             LengthPadding(()),
             [
                 0xc1059ed8, 0x367cd507, 0x3070dd17, 0xf70e5939, 0xffc00b31, 0x68581511, 0x64f98fa7,
@@ -158,11 +287,6 @@ impl BlockEncrypt for Shacal1 {
             .zip(block.array_chunks::<4>())
             .for_each(|(s, b)| *s = u32::from_be_bytes(*b));
 
-        for (i, w) in schedule.iter().enumerate() {
-            println!("W[{}] = {:08x}", i, w);
-        }
-        println!();
-
         // Execute the rounds.
         let mut a = state[0];
         let mut b = state[1];
@@ -187,14 +311,8 @@ impl BlockEncrypt for Shacal1 {
             let next = (schedule[13] ^ schedule[8] ^ schedule[2] ^ schedule[0]).rotate_left(1);
             schedule.rotate_left(1);
             schedule[15] = next;
-
-            println!(
-                "t = {} {:08X} {:08X} {:08X} {:08X} {:08X}",
-                t, a, b, c, d, e
-            );
         }
 
-        println!();
         Ciphertext([a, b, c, d, e])
     }
 }
@@ -217,11 +335,6 @@ impl BlockEncrypt for Shacal2 {
             .iter_mut()
             .zip(block.array_chunks::<4>())
             .for_each(|(s, b)| *s = u32::from_be_bytes(*b));
-
-        for (i, w) in schedule.iter().enumerate() {
-            println!("W[{}] = {:08x}", i, w);
-        }
-        println!();
 
         // Execute the rounds.
         let mut a = state[0];
@@ -257,19 +370,26 @@ impl BlockEncrypt for Shacal2 {
                 .wrapping_add(schedule[0]);
             schedule.rotate_left(1);
             schedule[15] = next;
-
-            println!(
-                "t = {} {:08X} {:08X} {:08X} {:08X} {:08X} {:08X} {:08X} {:08X}",
-                t, a, b, c, d, e, f, g, h
-            );
         }
 
-        println!();
         Ciphertext([a, b, c, d, e, f, g, h])
     }
 }
 
-fn ft(t: u32, x: u32, y: u32, z: u32) -> u32 {
+/// Helper function $f_t$ used by [SHA-1](Sha1).
+///
+/// Uses [$Ch$](ch), [$Maj$](maj), and [$Parity$](parity) functions.
+///
+/// $$
+/// f_t(x, y, z) =
+/// \begin{cases}
+/// Ch(x, y, z) & 0 \le t < 20\newline
+/// Maj(x, y, z) & 40 \le t < 60\newline
+/// Parity(x, y, z) & otherwise \newline
+/// \end{cases}
+/// $$
+#[docext]
+pub fn ft(t: u32, x: u32, y: u32, z: u32) -> u32 {
     match t {
         0..=19 => ch(x, y, z),
         40..=59 => maj(x, y, z),
@@ -277,7 +397,9 @@ fn ft(t: u32, x: u32, y: u32, z: u32) -> u32 {
     }
 }
 
-fn kt(t: u32) -> u32 {
+/// Round constant $K_t$ used by [SHA-1](Sha1).
+#[docext]
+pub fn kt(t: u32) -> u32 {
     match t {
         0..=19 => 0x5a827999,
         20..=39 => 0x6ed9eba1,
@@ -286,39 +408,93 @@ fn kt(t: u32) -> u32 {
     }
 }
 
-fn ch(x: u32, y: u32, z: u32) -> u32 {
+/// Helper function $Ch$.
+///
+/// $$
+/// Ch(x, y, z) = (x \land y) \oplus (\neg x \land z)
+/// $$
+#[docext]
+pub fn ch(x: u32, y: u32, z: u32) -> u32 {
     (x & y) ^ ((!x) & z)
 }
 
-fn maj(x: u32, y: u32, z: u32) -> u32 {
+/// Helper function $Maj$.
+///
+/// $$
+/// Maj(x, y, z) = (x \land y) \oplus (x \land z) \oplus (y \land z)
+/// $$
+#[docext]
+pub fn maj(x: u32, y: u32, z: u32) -> u32 {
     (x & y) ^ (x & z) ^ (y & z)
 }
 
-fn parity(x: u32, y: u32, z: u32) -> u32 {
+/// Helper function $Parity$.
+///
+/// $$
+/// Parity(x, y, z) = x \oplus y \oplus z
+/// $$
+#[docext]
+pub fn parity(x: u32, y: u32, z: u32) -> u32 {
     x ^ y ^ z
 }
 
-fn uppercase_sigma_0(x: u32) -> u32 {
+/// Helper function $\Sigma_0^{256}$.
+///
+/// $$
+/// \Sigma_0^{256}(x) = \mathrm{ROTR}(x, 2) \oplus \mathrm{ROTR}(x, 13) \oplus
+/// \mathrm{ROTR}(x, 22) $$
+///
+/// Where $\mathrm{ROTR}$ is bitwise rotation to the right.
+#[docext]
+pub fn uppercase_sigma_0(x: u32) -> u32 {
     x.rotate_right(2) ^ x.rotate_right(13) ^ x.rotate_right(22)
 }
 
-fn uppercase_sigma_1(x: u32) -> u32 {
+/// Helper function $\Sigma_1^{256}$.
+///
+/// $$
+/// \Sigma_1^{256}(x) = \mathrm{ROTR}(x, 6) \oplus \mathrm{ROTR}(x, 11) \oplus
+/// \mathrm{ROTR}(x, 25) $$
+///
+/// Where $\mathrm{ROTR}$ is bitwise rotation to the right.
+#[docext]
+pub fn uppercase_sigma_1(x: u32) -> u32 {
     x.rotate_right(6) ^ x.rotate_right(11) ^ x.rotate_right(25)
 }
 
-fn lowercase_sigma_0(x: u32) -> u32 {
+/// Helper function $\sigma_0^{256}$.
+///
+/// $$
+/// \sigma_0^{256}(x) = \mathrm{ROTR}(x, 7) \oplus \mathrm{ROTR}(x, 18) \oplus
+/// (x \gg 3) $$
+///
+/// Where $\mathrm{ROTR}$ is bitwise rotation to the right, and $\gg$ is the
+/// bitwise right shift operation.
+#[docext]
+pub fn lowercase_sigma_0(x: u32) -> u32 {
     x.rotate_right(7) ^ x.rotate_right(18) ^ (x >> 3)
 }
 
-fn lowercase_sigma_1(x: u32) -> u32 {
+/// Helper function $\sigma_1^{256}$.
+///
+/// $$
+/// \sigma_1^{256}(x) = \mathrm{ROTR}(x, 17) \oplus \mathrm{ROTR}(x, 19) \oplus
+/// (x \gg 10) $$
+///
+/// Where $\mathrm{ROTR}$ is bitwise rotation to the right, and $\gg$ is the
+/// bitwise right shift operation.
+#[docext]
+pub fn lowercase_sigma_1(x: u32) -> u32 {
     x.rotate_right(17) ^ x.rotate_right(19) ^ (x >> 10)
 }
 
-// TODO The davies-meyer step in SHA-2 is modular addition
+/// Because the new state is derived by adding the "working variables" to the
+/// current state, the [Davies-Meyer step](DaviesMeyerStep) in SHA-1 and SHA-2
+/// is modular addition.
 #[derive(Debug)]
-struct Plus<State>(PhantomData<State>);
+pub struct ModularAddition<State>(PhantomData<State>);
 
-impl<State> DaviesMeyerStep for Plus<State>
+impl<State> DaviesMeyerStep for ModularAddition<State>
 where
     State: AsMut<[u32]> + AsRef<[u32]>,
 {
@@ -333,13 +509,15 @@ where
     }
 }
 
-// TODO Talk about length extension attacks, and how the sponge construction
-// used by SHA3 mitigates them
-// TODO Speaking of which, maybe I should implement the general "sponge
-// construction" too similar to MerkleDamgard? Does this make any sense? I think
-// so
+/// SHA-2 length padding.
+///
+/// The preimage is padded by appending a single 1 bit, followed by as many bits
+/// as needed to pad to a multiple of 512 - 64 = 448 bits, followed by the _bit
+/// length_ of the preimage encoded as an unsigned big-endian 64 bit integer.
+/// This results in a [Merkle-Damgard compliant padding](MerkleDamgardPad) into
+/// blocks of 512 bits.
 #[derive(Debug)]
-struct LengthPadding(());
+pub struct LengthPadding(());
 
 impl MerkleDamgardPad for LengthPadding {
     type Block = Block;
