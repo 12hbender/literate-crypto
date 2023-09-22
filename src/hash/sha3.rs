@@ -86,8 +86,8 @@ pub const NUM_ROUNDS: usize = 24;
 /// This is a 5x5 matrix of 64-bit words.
 ///
 /// The state is accessed as $A_{x, y, z}$, where $x$ is the column, $y$ is the
-/// row and $z$ is the _bit_ being accessed, $x, y \in \\{ 0, 1, \dots, 4 \\}$,
-/// $z \in \\{ 0, 1, \dots, 63 \\}$. The bit can be omitted to access the entire
+/// row and $z$ is the _bit_ being accessed, $x, y \in \{ 0, 1, \dots, 4 \}$,
+/// $z \in \{ 0, 1, \dots, 63 \}$. The bit can be omitted to access the entire
 /// word.
 #[docext]
 pub type State = [[u64; NUM_COLS]; NUM_ROWS];
@@ -189,9 +189,9 @@ pub fn keccak_p(state: &mut State) {
 ///
 /// $$
 /// C_{x, z} = A_ {x, 0, z} \oplus A_{x, 1, z} \oplus A_{x, 2, z} \oplus A_{x,
-/// 3, z} \oplus A_{x, 4, z},\newline
-/// x \in \\{0, 1, \dots, 4\\},
-/// z \in \\{0, 1, \dots, 63\\}
+/// 3, z} \oplus A_{x, 4, z},\\
+/// x \in \{0, 1, \dots, 4\},
+/// z \in \{0, 1, \dots, 63\}
 /// $$
 ///
 /// Where $A$ is the [internal state](State). To operate on words instead of
@@ -199,8 +199,8 @@ pub fn keccak_p(state: &mut State) {
 ///
 /// $$
 /// C_{x} = A_ {x, 0} \oplus A_{x, 1} \oplus A_{x, 2} \oplus A_{x, 3} \oplus
-/// A_{x, 4},\newline
-/// x \in \\{0, 1, \dots, 4\\},
+/// A_{x, 4},\\
+/// x \in \{0, 1, \dots, 4\},
 /// $$
 ///
 /// Clearly, $C_{x}$ is the XOR of all words in column $x$ of $A$.
@@ -209,9 +209,9 @@ pub fn keccak_p(state: &mut State) {
 ///
 /// $$
 /// D_{x, z} = C_{x - 1 \pmod{5}, \space z} \oplus C_{x + 1 \pmod{5}, \space z -
-/// 1 \pmod{64}},\newline
-/// x \in \\{0, 1, \dots, 4\\},
-/// z \in \\{0, 1, \dots, 63\\}
+/// 1 \pmod{64}},\\
+/// x \in \{0, 1, \dots, 4\},
+/// z \in \{0, 1, \dots, 63\}
 /// $$
 ///
 /// The interesting bit is that $D_{\dots, \space z}$ is computed using
@@ -223,23 +223,23 @@ pub fn keccak_p(state: &mut State) {
 /// the least significant), this rotation is actually to the left:
 ///
 /// $$
-/// D_{x} = C_{x - 1 \pmod{5}} \oplus \mathrm{ROTL}(C_{x + 1 \pmod{5}}),\newline
-/// x \in \\{0, 1, \dots, 4\\}
+/// D_{x} = C_{x - 1 \pmod{5}} \oplus \mathrm{ROTL}(C_{x + 1 \pmod{5}}),\\
+/// x \in \{0, 1, \dots, 4\}
 /// $$
 ///
 /// Where $\mathrm{ROTL}$ is the left rotation by one bit.
 ///
 /// Finally, the state is updated:
 /// $$
-/// A_{x, y, z}^{\prime} = A_{x, y, z} \oplus D_{x, z},\newline
-/// x, y \in \\{0, 1, \dots, 4\\},
-/// z \in \\{0, 1, \dots, 63\\}
+/// A_{x, y, z}^{\prime} = A_{x, y, z} \oplus D_{x, z},\\
+/// x, y \in \{0, 1, \dots, 4\},
+/// z \in \{0, 1, \dots, 63\}
 /// $$
 ///
 /// Which is equivalent to the following operations on words:
 /// $$
-/// A_{x, y}^{\prime} = A_{x, y} \oplus D_{x},\newline
-/// x, y \in \\{0, 1, \dots, 4\\}
+/// A_{x, y}^{\prime} = A_{x, y} \oplus D_{x},\\
+/// x, y \in \{0, 1, \dots, 4\}
 /// $$
 ///
 /// Since $D$ only depends on $C$, and $C$ is never updated, the $D$ array can
@@ -247,8 +247,8 @@ pub fn keccak_p(state: &mut State) {
 ///
 /// $$
 /// A_{x, y} \gets A_{x, y} \oplus C_{x - 1 \pmod{5}} \oplus
-/// \mathrm{ROTL}(C_{x + 1 \pmod{5}}),\newline
-/// x, y \in \\{0, 1, \dots, 4\\},\newline
+/// \mathrm{ROTL}(C_{x + 1 \pmod{5}}),\\
+/// x, y \in \{0, 1, \dots, 4\},\\
 /// $$
 #[docext]
 #[allow(clippy::needless_range_loop)]
@@ -276,9 +276,9 @@ pub fn theta(state: &mut State) {
 ///
 /// $$
 /// A_{x, y, z} \gets A_{x, \space y, \space z - \rho(x, y) \pmod{64}}
-/// \Rightarrow A_{x, y} \gets \mathrm{ROTL}(A_{x, y}, \rho(x, y)),\newline
-/// x, y \in \\{0, 1, \dots, 4\\},
-/// z \in \\{0, 1, \dots, 63\\}
+/// \Rightarrow A_{x, y} \gets \mathrm{ROTL}(A_{x, y}, \rho(x, y)),\\
+/// x, y \in \{0, 1, \dots, 4\},
+/// z \in \{0, 1, \dots, 63\}
 /// $$
 ///
 /// Where $\mathrm{ROTL}(b, n)$ is the binary left rotation of number $b$ by $n$
@@ -299,9 +299,9 @@ pub fn rho(state: &mut State) {
 ///
 /// $$
 /// A_{x, y, z}^{\prime} = A_{x + 3y \pmod{5}, \space x, \space z},
-/// \Rightarrow A_{x, y}^{\prime} = A_{x + 3y \pmod{5}, \space x}, \newline
-/// x, y \in \\{0, 1, \dots, 4\\},
-/// z \in \\{0, 1, \dots, 63\\},\newline
+/// \Rightarrow A_{x, y}^{\prime} = A_{x + 3y \pmod{5}, \space x}, \\
+/// x, y \in \{0, 1, \dots, 4\},
+/// z \in \{0, 1, \dots, 63\},\\
 /// A \gets A^{\prime}
 /// $$
 #[docext]
@@ -321,9 +321,9 @@ pub fn pi(state: &mut State) {
 ///
 /// $$
 /// A_{x, y, z}^{\prime} = A_{x, y, z} \oplus ((A_{x+1 \pmod{5}, \space y,
-/// \space z} \oplus 1) \cdot A_{x+2 \pmod{5}, \space y, \space z}),\newline
-/// x, y \in \\{0, 1, \dots, 4\\},
-/// z \in \\{0, 1, \dots, 63\\}
+/// \space z} \oplus 1) \cdot A_{x+2 \pmod{5}, \space y, \space z}),\\
+/// x, y \in \{0, 1, \dots, 4\},
+/// z \in \{0, 1, \dots, 63\}
 /// $$
 ///
 /// Where $\cdot$ is the binary AND operation. $b \oplus 1$ is equivalent to a
@@ -331,8 +331,8 @@ pub fn pi(state: &mut State) {
 ///
 /// $$
 /// A_{x, y}^{\prime} = A_{x, y} \oplus ((\mathrm{NOT}(A_{x+1 \pmod{5}, \space
-/// y })) \cdot A_{x+2 \pmod{5}, \space y}) \newline
-/// x, y \in \\{0, 1, \dots, 4\\},\newline
+/// y })) \cdot A_{x+2 \pmod{5}, \space y}) \\
+/// x, y \in \{0, 1, \dots, 4\},\\
 /// A \gets A^{\prime}
 /// $$
 #[docext]

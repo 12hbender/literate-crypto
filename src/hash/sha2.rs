@@ -113,12 +113,12 @@ pub struct Sha224(
 /// rotation:
 ///
 /// $$
-/// T = \mathrm{ROTL}(a, 5) + f_t(b, c, d) + e + K_t + W_0 \pmod{2^{32}}\newline
-/// e \gets d\newline
-/// d \gets c\newline
-/// c \gets \mathrm{ROTL}(b, 30)\newline
-/// b \gets a\newline
-/// a \gets T\newline
+/// T = \mathrm{ROTL}(a, 5) + f_t(b, c, d) + e + K_t + W_0 \pmod{2^{32}}\\
+/// e \gets d\\
+/// d \gets c\\
+/// c \gets \mathrm{ROTL}(b, 30)\\
+/// b \gets a\\
+/// a \gets T\\
 /// $$
 ///
 /// The message schedule $W$ is a 16 element array of 32-bit words. It is
@@ -126,8 +126,8 @@ pub struct Sha224(
 /// round as follows:
 ///
 /// $$
-/// T = \mathrm{ROTL}(W_{13} \oplus W_8 \oplus W_2 \oplus W_0, 1)\newline
-/// W_i \gets W_{i + 1}, \forall i \in \\{0, 1, \dots, 14\\}\newline
+/// T = \mathrm{ROTL}(W_{13} \oplus W_8 \oplus W_2 \oplus W_0, 1)\\
+/// W_i \gets W_{i + 1}, \forall i \in \{0, 1, \dots, 14\}\\
 /// W_{15} \gets T
 /// $$
 ///
@@ -152,15 +152,15 @@ pub struct Shacal1(());
 ///
 /// $$
 /// T_1 = h + \Sigma_1^{256}(e) + Ch(e, f, g) + K_t^{256} + W_0
-/// \pmod{2^{32}}\newline
-/// T_2 = \Sigma_0^{256}(a) + Maj(a, b, c) \pmod{2^{32}}\newline
-/// h \gets g\newline
-/// g \gets f\newline
-/// f \gets e\newline
-/// e \gets d + T_1\newline
-/// d \gets c\newline
-/// c \gets b\newline
-/// b \gets a\newline
+/// \pmod{2^{32}}\\
+/// T_2 = \Sigma_0^{256}(a) + Maj(a, b, c) \pmod{2^{32}}\\
+/// h \gets g\\
+/// g \gets f\\
+/// f \gets e\\
+/// e \gets d + T_1\\
+/// d \gets c\\
+/// c \gets b\\
+/// b \gets a\\
 /// a \gets T_1 + T_2
 /// $$
 ///
@@ -170,8 +170,8 @@ pub struct Shacal1(());
 ///
 /// $$
 /// T = \sigma_1^{256}(W_{14}) + W_9 + \sigma_0^{256}(W_1) + W_0
-/// \pmod{2^{32}}\newline
-/// W_i \gets W_{i + 1}, \forall i \in \\{0, 1, \dots, 14\\}\newline
+/// \pmod{2^{32}}\\
+/// W_i \gets W_{i + 1}, \forall i \in \{0, 1, \dots, 14\}\\
 /// W_{15} \gets T
 /// $$
 ///
@@ -383,9 +383,9 @@ impl BlockEncrypt for Shacal2 {
 /// $$
 /// f_t(x, y, z) =
 /// \begin{cases}
-/// Ch(x, y, z) & 0 \le t < 20\newline
-/// Maj(x, y, z) & 40 \le t < 60\newline
-/// Parity(x, y, z) & otherwise \newline
+/// Ch(x, y, z) & 0 \le t < 20\\
+/// Maj(x, y, z) & 40 \le t < 60\\
+/// Parity(x, y, z) & otherwise \\
 /// \end{cases}
 /// $$
 #[docext]

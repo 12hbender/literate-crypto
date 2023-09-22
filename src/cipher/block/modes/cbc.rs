@@ -12,7 +12,7 @@ use {
 /// blocks, CBC mode encrypts $P$ as follows:
 ///
 /// $$
-/// C_i = E(P_i \oplus C_{i-1}),\newline
+/// C_i = E(P_i \oplus C_{i-1}),\\
 /// C = C_1 \parallel C_2 \parallel \dots \parallel C_n
 /// $$
 ///

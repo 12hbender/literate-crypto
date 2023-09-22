@@ -429,12 +429,12 @@ pub fn inv_mix_columns<const BLOCK_BYTES: usize>(state: &mut [u8; BLOCK_BYTES]) 
 /// is equivalent to an XOR operation. Therefore,
 ///
 /// $$
-/// abcdefgh_2 + ijklmnop_2 \equiv \newline
+/// abcdefgh_2 + ijklmnop_2 \equiv \\
 /// (a x^7 + b x^6 + c x^5 + d x^4 + e x^3 + f x^2 + g x + h) + (i x^7 + j x^6 +
-/// k x^5 + l x^4 + m x^3 + n x^2 + o x + p) \equiv \newline
+/// k x^5 + l x^4 + m x^3 + n x^2 + o x + p) \equiv \\
 /// (a \oplus i) x^7 + (b \oplus j) x^6 + (c \oplus k) x^5 + (d \oplus l) x^4 +
 /// (e \oplus m) x^3 + (f \oplus n) x^2 + (g \oplus o) x + h \oplus p \equiv
-/// \newline abcdefgh_2 \oplus ijklmnop_2
+/// \\ abcdefgh_2 \oplus ijklmnop_2
 /// $$
 ///
 /// This shows that addition in $GF(2^8)$ is equivalent to the XOR of two
@@ -446,9 +446,9 @@ pub fn inv_mix_columns<const BLOCK_BYTES: usize>(state: &mut [u8; BLOCK_BYTES]) 
 /// polynomial $x$ can be implemented more efficiently:
 ///
 /// $$
-/// 02_{16} \cdot abcdefgh_2 \equiv \newline
+/// 02_{16} \cdot abcdefgh_2 \equiv \\
 /// x \cdot (a x^7 + b x^6 + c x^5 + d x^4 +
-/// e x^3 + f x^2 + g x + h) \mod m(x) =\newline
+/// e x^3 + f x^2 + g x + h) \mod m(x) =\\
 /// a x^8 + b x^7 + c x^6 + d x^5 + e x^4 + f x^3 + g x^2 + h x \mod m(x)
 /// $$
 ///
@@ -487,7 +487,7 @@ pub fn times_02(b: u8) -> u8 {
 /// Multiply `b` by `0x03` in the Galois field $GF(2^8)$.
 ///
 /// $$
-/// 03_{16} = 02_{16} \oplus 01_{16},\newline
+/// 03_{16} = 02_{16} \oplus 01_{16},\\
 /// b \cdot 03_{16} =
 /// b \cdot (02_{16} \oplus 01_{16}) =
 /// b \cdot 02_{16} \oplus b \cdot 01_{16} =
@@ -504,7 +504,7 @@ pub fn times_03(b: u8) -> u8 {
 ///
 /// $$
 /// 04_{16} \equiv 100_2 \equiv x^2 =
-/// x \cdot x \equiv 02_{16} \cdot 02_{16},\newline b \cdot 04_{16} =
+/// x \cdot x \equiv 02_{16} \cdot 02_{16},\\ b \cdot 04_{16} =
 /// b \cdot (02_{16} \cdot 02_{16}) = (b \cdot 02_{16}) \cdot 02_{16}
 /// $$
 ///
@@ -518,7 +518,7 @@ pub fn times_04(b: u8) -> u8 {
 ///
 /// $$
 /// 08_{16} \equiv 1000_2 \equiv x^3 =
-/// x^2 \cdot x \equiv 04_{16} \cdot 02_{16},\newline
+/// x^2 \cdot x \equiv 04_{16} \cdot 02_{16},\\
 /// b \cdot 08_{16} =
 /// b \cdot (04_{16} \cdot 02_{16}) = (b \cdot 04_{16}) \cdot 02_{16}
 /// $$
@@ -532,7 +532,7 @@ pub fn times_08(b: u8) -> u8 {
 /// Multiplication by `0x09` in the Galois field $GF(2^8)$.
 ///
 /// $$
-/// 09_{16} = 08_{16} \oplus 01_{16},\newline
+/// 09_{16} = 08_{16} \oplus 01_{16},\\
 /// b \cdot 09_{16} =
 /// b \cdot (08_{16} \oplus 01_{16}) =
 /// b \cdot 08_{16} \oplus b \cdot 01_{16} =
@@ -548,7 +548,7 @@ pub fn times_09(b: u8) -> u8 {
 /// Multiplication by `0x0b` in the Galois field $GF(2^8)$.
 ///
 /// $$
-/// \mathrm{0b_{16}} = 08_{16} \oplus 03_{16},\newline
+/// \mathrm{0b_{16}} = 08_{16} \oplus 03_{16},\\
 /// b \cdot \mathrm{0b_{16}} =
 /// b \cdot (08_{16} \oplus 03_{16}) =
 /// b \cdot 08_{16} \oplus b \cdot 03_{16}
@@ -563,10 +563,10 @@ pub fn times_0b(b: u8) -> u8 {
 /// Multiplication by `0x0d` in the Galois field $GF(2^8)$.
 ///
 /// $$
-/// \mathrm{0d_{16}} = 08_{16} \oplus 04_{16} \oplus 01_{16},\newline
+/// \mathrm{0d_{16}} = 08_{16} \oplus 04_{16} \oplus 01_{16},\\
 /// b \cdot \mathrm{0d_{16}} =
-/// b \cdot (08_{16} \oplus 04_{16} \oplus 01_{16}) =\newline
-/// b \cdot 08_{16} \oplus b \cdot 04_{16} \oplus b \cdot 01_{16} =\newline
+/// b \cdot (08_{16} \oplus 04_{16} \oplus 01_{16}) =\\
+/// b \cdot 08_{16} \oplus b \cdot 04_{16} \oplus b \cdot 01_{16} =\\
 /// b \cdot 08_{16} \oplus b \cdot 04_{16} \oplus b
 /// $$
 ///
@@ -579,10 +579,10 @@ pub fn times_0d(b: u8) -> u8 {
 /// Multiplication by `0x0e` in the Galois field $GF(2^8)$.
 ///
 /// $$
-/// \mathrm{0e_{16}} = 08_{16} \oplus 04_{16} \oplus 02_{16},\newline
+/// \mathrm{0e_{16}} = 08_{16} \oplus 04_{16} \oplus 02_{16},\\
 /// b \cdot \mathrm{0e_{16}} =
-/// b \cdot (08_{16} \oplus 04_{16} \oplus 02_{16}) =\newline
-/// b \cdot 08_{16} \oplus b \cdot 04_{16} \oplus b \cdot 02_{16} =\newline
+/// b \cdot (08_{16} \oplus 04_{16} \oplus 02_{16}) =\\
+/// b \cdot 08_{16} \oplus b \cdot 04_{16} \oplus b \cdot 02_{16} =\\
 /// b \cdot 08_{16} \oplus b \cdot 04_{16} \oplus b
 /// $$
 ///
