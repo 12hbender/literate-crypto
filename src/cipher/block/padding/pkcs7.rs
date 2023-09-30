@@ -69,6 +69,6 @@ pub struct InvalidPadding;
 
 impl fmt::Display for InvalidPadding {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "invalid padding")
+        f.write_str("invalid padding")
     }
 }

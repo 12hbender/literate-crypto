@@ -5,6 +5,7 @@ use {
 
 mod block;
 mod key;
+mod onetimepad;
 
 pub use {
     block::{
@@ -17,11 +18,13 @@ pub use {
         BlockEncrypt,
         BlockMode,
         Cbc,
+        Ctr,
         Ecb,
         Padding,
         Pkcs7,
     },
     key::Key,
+    onetimepad::OneTimePad,
 };
 
 /// A cipher encrypts and decrypts data of arbitrary length using a symmetric
@@ -40,18 +43,35 @@ pub use {
 /// and $\mathbf{K}$ is the set of all possible keys (key space). Note that the
 /// key space usually has a fixed size, while the plaintext space is infinite.
 #[docext]
-pub trait Cipher {
-    type Err;
+pub trait Cipher:
+    CipherEncrypt<EncryptionKey = Self::Key> + CipherDecrypt<DecryptionKey = Self::Key>
+{
     type Key;
+}
+
+/// The encryption half of a [cipher](Cipher).
+pub trait CipherEncrypt {
+    type EncryptionErr;
+    type EncryptionKey;
 
     /// Encrypt the plaintext.
-    fn encrypt(&self, data: Plaintext<Vec<u8>>, key: Key<Self::Key>) -> Ciphertext<Vec<u8>>;
+    fn encrypt(
+        &self,
+        data: Plaintext<Vec<u8>>,
+        key: Key<Self::EncryptionKey>,
+    ) -> Result<Ciphertext<Vec<u8>>, Self::EncryptionErr>;
+}
+
+/// The decryption half of a [cipher](Cipher).
+pub trait CipherDecrypt {
+    type DecryptionErr;
+    type DecryptionKey;
 
     /// Decrypt the ciphertext. This operation can fail, for example, if the
     /// ciphertext was not created by this cipher.
     fn decrypt(
         &self,
         data: Ciphertext<Vec<u8>>,
-        key: Key<Self::Key>,
-    ) -> Result<Plaintext<Vec<u8>>, Self::Err>;
+        key: Key<Self::DecryptionKey>,
+    ) -> Result<Plaintext<Vec<u8>>, Self::DecryptionErr>;
 }

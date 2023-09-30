@@ -1,7 +1,10 @@
 use crate::Cipher;
 
 mod cbc;
+mod ctr;
 mod ecb;
+// TODO Implement GCM, start from mathematical foundations for polynomials,
+// those MIGHT also be useful for ZKP or something else, or maybe not.
 
 /// A way to execute a [block cipher](crate::BlockCipher) on data of arbitrary
 /// length.
@@ -14,4 +17,4 @@ mod ecb;
 /// requirements.
 pub trait BlockMode: Cipher {}
 
-pub use {cbc::Cbc, ecb::Ecb};
+pub use {cbc::Cbc, ctr::Ctr, ecb::Ecb};

@@ -5,7 +5,7 @@
 //! for a random plaintext and key.
 
 use {
-    crate::{Aes128, Aes192, Aes256, Cbc, Cipher, Ecb, Key, Pkcs7, Plaintext},
+    crate::{Aes128, Aes192, Aes256, Cbc, Cipher, Ctr, Ecb, Key, Pkcs7, Plaintext},
     core::fmt,
     rand::Rng,
 };
@@ -61,6 +61,14 @@ fn aes_256_cbc_pkcs7() {
     test(Cbc::new(Aes256::default(), Pkcs7::default(), iv), 16);
 }
 
+#[test]
+fn aes_256_ctr() {
+    test(Ctr::new(Aes256::default(), rand::thread_rng().gen()), 10);
+    test(Ctr::new(Aes256::default(), rand::thread_rng().gen()), 20);
+    test(Ctr::new(Aes256::default(), rand::thread_rng().gen()), 30);
+    test(Ctr::new(Aes256::default(), rand::thread_rng().gen()), 16);
+}
+
 /// Test that a cipher is valid by making sure that
 /// ```
 /// decrypt(encrypt(plaintext, key)) == plaintext
@@ -68,7 +76,8 @@ fn aes_256_cbc_pkcs7() {
 fn test<Cip: Cipher>(cip: Cip, data_size: usize)
 where
     Cip::Key: for<'a> TryFrom<&'a [u8]> + fmt::Debug + Clone,
-    Cip::Err: fmt::Debug,
+    Cip::EncryptionErr: fmt::Debug,
+    Cip::DecryptionErr: fmt::Debug,
 {
     let data: Plaintext<Vec<u8>> =
         Plaintext((0..data_size).map(|_| rand::thread_rng().gen()).collect());
@@ -76,7 +85,7 @@ where
     let key: Vec<u8> = (0..key_size).map(|_| rand::thread_rng().gen()).collect();
     let key = Key(Cip::Key::try_from(key.as_slice()).unwrap_or_else(|_| unreachable!()));
 
-    let ciphertext = cip.encrypt(data.clone(), key.clone());
+    let ciphertext = cip.encrypt(data.clone(), key.clone()).unwrap();
     let plaintext = cip.decrypt(ciphertext.clone(), key.clone()).unwrap();
 
     assert_eq!(

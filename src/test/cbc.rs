@@ -4,7 +4,8 @@ use {
         BlockDecrypt,
         BlockEncrypt,
         Cbc,
-        Cipher,
+        CipherDecrypt,
+        CipherEncrypt,
         Ciphertext,
         Key,
         Padding,
@@ -20,7 +21,7 @@ fn cbc() {
     let data = Plaintext([1, 2, 3, 4, 5, 6].to_vec());
     let key = Key([7, 8]);
 
-    let ciphertext = cip.encrypt(data.clone(), key);
+    let ciphertext = cip.encrypt(data.clone(), key).unwrap();
     #[allow(clippy::identity_op)]
     let expected = Ciphertext([
         1 ^ 1 ^ 7,

@@ -1,7 +1,19 @@
 use {
-    crate::{BlockCipher, BlockMode, Cipher, Ciphertext, Key, Padding, Plaintext},
+    crate::{
+        BlockCipher,
+        BlockDecrypt,
+        BlockEncrypt,
+        BlockMode,
+        Cipher,
+        CipherDecrypt,
+        CipherEncrypt,
+        Ciphertext,
+        Key,
+        Padding,
+        Plaintext,
+    },
     docext::docext,
-    std::{fmt, mem::size_of},
+    std::{convert::Infallible, fmt, mem::size_of},
 };
 
 /// Cipher block chaining mode, the most common [mode of
@@ -32,19 +44,19 @@ use {
 /// Because the same plaintext with a different IV will encrypt to a different
 /// ciphertext, CBC solves the issues of [ECB mode](crate::Ecb).
 #[docext]
-pub struct Cbc<Cip: BlockCipher, Pad> {
+pub struct Cbc<Cip, Pad, Block> {
     cip: Cip,
     pad: Pad,
-    iv: Cip::Block,
+    iv: Block,
 }
 
-impl<Cip: BlockCipher, Pad: Padding> Cbc<Cip, Pad> {
-    pub fn new(cip: Cip, pad: Pad, iv: Cip::Block) -> Self {
+impl<Cip, Pad, Block> Cbc<Cip, Pad, Block> {
+    pub fn new(cip: Cip, pad: Pad, iv: Block) -> Self {
         Self { cip, pad, iv }
     }
 }
 
-impl<Cip: BlockCipher, Pad: Padding> Cipher for Cbc<Cip, Pad>
+impl<Cip: BlockCipher, Pad: Padding> Cipher for Cbc<Cip, Pad, Cip::Block>
 where
     Cip::Block: for<'a> TryFrom<&'a mut [u8], Error: fmt::Debug>
         + AsRef<[u8]>
@@ -53,16 +65,43 @@ where
         + Clone,
     Cip::Key: Clone,
 {
-    type Err = Pad::Err;
     type Key = Cip::Key;
+}
 
-    fn encrypt(&self, data: Plaintext<Vec<u8>>, key: Key<Self::Key>) -> Ciphertext<Vec<u8>> {
-        let block_size = size_of::<Cip::Block>();
+impl<Cip: BlockCipher, Pad: Padding> BlockMode for Cbc<Cip, Pad, Cip::Block>
+where
+    Cip::Block: for<'a> TryFrom<&'a mut [u8], Error: fmt::Debug>
+        + AsRef<[u8]>
+        + AsMut<[u8]>
+        + IntoIterator<Item = u8>
+        + Clone,
+    Cip::Key: Clone,
+{
+}
+
+impl<Enc: BlockEncrypt, Pad: Padding> CipherEncrypt for Cbc<Enc, Pad, Enc::EncryptionBlock>
+where
+    Enc::EncryptionBlock: for<'a> TryFrom<&'a mut [u8], Error: fmt::Debug>
+        + AsRef<[u8]>
+        + AsMut<[u8]>
+        + IntoIterator<Item = u8>
+        + Clone,
+    Enc::EncryptionKey: Clone,
+{
+    type EncryptionErr = Infallible;
+    type EncryptionKey = Enc::EncryptionKey;
+
+    fn encrypt(
+        &self,
+        data: Plaintext<Vec<u8>>,
+        key: Key<Self::EncryptionKey>,
+    ) -> Result<Ciphertext<Vec<u8>>, Self::EncryptionErr> {
+        let block_size = size_of::<Enc::EncryptionBlock>();
         let mut prev = Ciphertext(self.iv.clone());
         let mut data = self.pad.pad(data, block_size);
         // Encrypt the blocks in-place, using the input vector.
         for chunk in data.0.chunks_mut(block_size) {
-            let mut block: Cip::Block = chunk.try_into().unwrap();
+            let mut block: Enc::EncryptionBlock = chunk.try_into().unwrap();
             block
                 .as_mut()
                 .iter_mut()
@@ -72,15 +111,28 @@ where
             chunk.copy_from_slice(ciphertext.0.as_ref());
             prev = ciphertext;
         }
-        Ciphertext(data.0)
+        Ok(Ciphertext(data.0))
     }
+}
+
+impl<Dec: BlockDecrypt, Pad: Padding> CipherDecrypt for Cbc<Dec, Pad, Dec::DecryptionBlock>
+where
+    Dec::DecryptionBlock: for<'a> TryFrom<&'a mut [u8], Error: fmt::Debug>
+        + AsRef<[u8]>
+        + AsMut<[u8]>
+        + IntoIterator<Item = u8>
+        + Clone,
+    Dec::DecryptionKey: Clone,
+{
+    type DecryptionErr = Pad::Err;
+    type DecryptionKey = Dec::DecryptionKey;
 
     fn decrypt(
         &self,
         mut data: Ciphertext<Vec<u8>>,
-        key: Key<Self::Key>,
-    ) -> Result<Plaintext<Vec<u8>>, Self::Err> {
-        let block_size = size_of::<Cip::Block>();
+        key: Key<Self::DecryptionKey>,
+    ) -> Result<Plaintext<Vec<u8>>, Self::DecryptionErr> {
+        let block_size = size_of::<Dec::DecryptionBlock>();
         let mut prev = Ciphertext(self.iv.clone());
         // Decrypt the blocks in-place, using the input vector.
         for chunk in data.0.chunks_mut(block_size) {
@@ -97,15 +149,4 @@ where
         }
         self.pad.unpad(Plaintext(data.0), block_size)
     }
-}
-
-impl<Cip: BlockCipher, Pad: Padding> BlockMode for Cbc<Cip, Pad>
-where
-    Cip::Block: for<'a> TryFrom<&'a mut [u8], Error: fmt::Debug>
-        + AsRef<[u8]>
-        + AsMut<[u8]>
-        + IntoIterator<Item = u8>
-        + Clone,
-    Cip::Key: Clone,
-{
 }
