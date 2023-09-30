@@ -1,26 +1,33 @@
+mod fortuna;
+
 /// Cryptographically secure pseudorandom number generator.
 ///
 /// TODO Explain what this means and how it's different from a regular PRNG.
 pub trait Csprng {
-    // TODO Explain why this (mostly performance)
-    type Output;
+    fn next(&mut self) -> u8;
 
-    fn next(&mut self) -> Self::Output;
+    fn iter(&mut self) -> impl Iterator<Item = u8>
+    where
+        Self: Sized,
+    {
+        CsprngIter(self)
+    }
 }
 
-// TODO The main Csprng implementation would be Fortuna. Unlike the spec, I
-// should make it use a stream cipher instead of a block cipher. Then it can be
-// implemented with both ChaCha20 and CTR AES.
-// TODO Fortuna needs SHA256, so I should implement hashing first.
+/// A source of entropy.
+///
+/// Typically, this is a hardware component which generates "true randomness"
+/// based on the environment, such as the environmental noise, typing and mouse
+/// movement patterns, static noise coming from other hardware components, and
+/// other similar unpredictable sources.
+pub trait Entropy {
+    fn get(&mut self, buf: &mut [u8]);
+}
 
-/// Iterator over a PRNG.
-pub struct CsprngIter<T>(T);
+struct CsprngIter<'a, C>(&'a mut C);
 
-impl<Rng> Iterator for CsprngIter<Rng>
-where
-    Rng: Csprng,
-{
-    type Item = Rng::Output;
+impl<C: Csprng> Iterator for CsprngIter<'_, C> {
+    type Item = u8;
 
     fn next(&mut self) -> Option<Self::Item> {
         Some(self.0.next())
