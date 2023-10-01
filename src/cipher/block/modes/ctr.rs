@@ -10,9 +10,39 @@ use {
         OneTimePad,
         Plaintext,
     },
+    docext::docext,
     std::{fmt, iter, mem},
 };
 
+/// Block counter [mode](BlockMode) turns a block cipher into a stream cipher by
+/// counting blocks.
+///
+/// The algorithm keeps a monotonically incrementing counter. The
+/// plaintext is split into blocks. Each block of plaintext is encrypted by
+/// converting the counter into bytes, converting the bytes into a block (by
+/// appending as many zero bytes as needed to reach the block size),
+/// encrypting that block with the underlying block cipher, and XORing the
+/// ciphertext block with the appropriate block of plaintext. Afterwards, the
+/// block counter is incremented, and the process is repeated until there are no
+/// blocks left.
+///
+/// If the last block of plaintext is shorter than the block size, the last
+/// block of ciphertext is simply truncated to the length of the remaining
+/// plaintext.
+///
+/// The block counter is first set to some initial value, called the nonce. Like
+/// the [IV](crate::Cbc#iv) for [CBC mode](Cbc), the nonce does not need to be
+/// secret, but it needs to be unique.
+///
+/// Because the XOR operation cancels itself ($X \oplus Y \oplus Y = X$ for any
+/// $X, Y$), the decryption is exactly the same as encryption. Notably, it only
+/// relies on the [encryption function](crate::BlockEncrypt) of the underlying
+/// block cipher. The [decryption function](crate::BlockDecrypt) is never used.
+///
+/// The operation of counter mode essentially represents a [one-time
+/// pad](crate::OneTimePad), where the keystream is generated using the
+/// underlying block cipher and the block counter.
+#[docext]
 pub struct Ctr<Enc: BlockEncrypt> {
     enc: Enc,
     nonce: u64,

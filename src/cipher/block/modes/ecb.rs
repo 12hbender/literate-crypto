@@ -21,6 +21,8 @@ use {
 /// ECB is the simplest mode of operation for block ciphers: it simply splits
 /// the input data into blocks, and encrypts each block independently.
 ///
+/// # Security
+///
 /// ECB is insecure because the same block in the plaintext will always encrypt
 /// to the same block in the ciphertext. Imagine a server accepting encrypted
 /// YES/NO messages from a client. If an attacker can see the encrypted

@@ -35,6 +35,8 @@ use {
 /// on all blocks before it, and changing a single bit in the plaintext will
 /// cause every next block of ciphertext to change in an unpredictable way.
 ///
+/// # IV
+///
 /// The first block of plaintext is XORed with an initialization vector (IV),
 /// referred to as $C_0$ above. The IV is a block of random data which does not
 /// need to be secret, but it must be unique for each message encrypted with the
@@ -42,7 +44,7 @@ use {
 /// be sent to the recipient along with the ciphertext.
 ///
 /// Because the same plaintext with a different IV will encrypt to a different
-/// ciphertext, CBC solves the issues of [ECB mode](crate::Ecb).
+/// ciphertext, CBC solves the issues of [ECB mode](crate::Ecb#security).
 #[docext]
 pub struct Cbc<Cip, Pad, Block> {
     cip: Cip,

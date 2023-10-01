@@ -1,8 +1,25 @@
 use {
     crate::{BlockMode, Cipher, CipherDecrypt, CipherEncrypt, Ciphertext, Key, Plaintext},
+    docext::docext,
     std::{fmt, marker::PhantomData},
 };
 
+/// The one-time pad is a simple cipher which XORs the input plaintext with the
+/// key.
+///
+/// This means that the key must be at least as long as the plaintext. The
+/// key determines which bits of the plaintext will be flipped: if a bit in the
+/// key is 1, then the corresponding bit of plaintext will be flipped when
+/// generating the plaintext. For this reason, the key should be uniformly
+/// random and free of any patterns that can be analyzed.
+///
+/// Because the XOR operation cancels itself ($X \oplus Y \oplus Y = X$ for any
+/// $X, Y$), the decryption process is exactly the same as encryption.
+///
+/// If the key is kept secret and uniformly random, the one-time pad can be
+/// mathematically proven to be a perfect cipher, meaning that the ciphertext
+/// reveals absolutely nothing about the plaintext.
+#[docext]
 #[derive(Debug)]
 pub struct OneTimePad<K>(PhantomData<K>);
 
