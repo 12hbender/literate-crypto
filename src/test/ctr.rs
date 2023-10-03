@@ -4,7 +4,7 @@ use crate::{Aes128, CipherEncrypt, Ciphertext, Ctr, Key, Plaintext};
 /// set to 1 and never incremented.
 #[test]
 fn ctr_no_increments() {
-    let ctr = Ctr::new(Aes128::default(), 1);
+    let ctr = Ctr::new(Aes128::default(), 1).unwrap();
     let ciphertext = ctr
         .encrypt(
             Plaintext(vec![0x01, 0x10, 0x20]),
@@ -21,7 +21,7 @@ fn ctr_no_increments() {
 /// set to 256 and incremented once.
 #[test]
 fn ctr_with_increment() {
-    let ctr = Ctr::new(Aes128::default(), 256);
+    let ctr = Ctr::new(Aes128::default(), 256).unwrap();
     let ciphertext = ctr
         .encrypt(
             Plaintext(vec![

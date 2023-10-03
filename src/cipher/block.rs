@@ -6,7 +6,7 @@ mod padding;
 
 pub use {
     aes::{Aes128, Aes192, Aes256},
-    modes::{BlockMode, Cbc, Ctr, Ecb},
+    modes::{BlockMode, BlockSizeTooSmall, Cbc, Ctr, Ecb},
     padding::{Padding, Pkcs7},
 };
 

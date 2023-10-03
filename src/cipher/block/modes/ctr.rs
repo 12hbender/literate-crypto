@@ -11,11 +11,11 @@ use {
         Plaintext,
     },
     docext::docext,
-    std::{fmt, iter, mem},
+    std::{convert::Infallible, fmt, iter, mem},
 };
 
-/// Block counter [mode](BlockMode) turns a block cipher into a stream cipher by
-/// counting blocks.
+/// Block counter [mode](crate::BlockMode) turns a block cipher into a stream
+/// cipher by counting blocks.
 ///
 /// The algorithm keeps a monotonically incrementing counter. The
 /// plaintext is split into blocks. Each block of plaintext is encrypted by
@@ -31,8 +31,8 @@ use {
 /// plaintext.
 ///
 /// The block counter is first set to some initial value, called the nonce. Like
-/// the [IV](crate::Cbc#iv) for [CBC mode](Cbc), the nonce does not need to be
-/// secret, but it needs to be unique.
+/// the [IV](crate::Cbc#iv) for [CBC mode](crate::Cbc), the nonce does not need
+/// to be secret, but it needs to be unique.
 ///
 /// Because the XOR operation cancels itself ($X \oplus Y \oplus Y = X$ for any
 /// $X, Y$), the decryption is exactly the same as encryption. Notably, it only
@@ -43,7 +43,8 @@ use {
 /// pad](crate::OneTimePad), where the keystream is generated using the
 /// underlying block cipher and the block counter.
 #[docext]
-pub struct Ctr<Enc: BlockEncrypt> {
+#[derive(Debug)]
+pub struct Ctr<Enc> {
     enc: Enc,
     nonce: u64,
 }
@@ -66,8 +67,15 @@ where
 }
 
 impl<Enc: BlockEncrypt> Ctr<Enc> {
-    pub fn new(enc: Enc, nonce: u64) -> Self {
-        Self { enc, nonce }
+    pub fn new(enc: Enc, nonce: u64) -> Result<Self, BlockSizeTooSmall> {
+        // Check that the counter bytes can be packed into the plaintext block.
+        // TODO Remove this with a proper BlockSize trait
+        let block_size = mem::size_of::<Enc::EncryptionBlock>();
+        if block_size < mem::size_of_val(&nonce) {
+            Err(BlockSizeTooSmall)
+        } else {
+            Ok(Self { enc, nonce })
+        }
     }
 }
 
@@ -77,7 +85,7 @@ where
     Enc::EncryptionBlock: IntoIterator<Item = u8> + AsMut<[u8]> + Default,
     Enc::EncryptionKey: 'static + Clone,
 {
-    type EncryptionErr = BlockSizeTooSmall;
+    type EncryptionErr = Infallible;
     type EncryptionKey = Enc::EncryptionKey;
 
     fn encrypt(
@@ -86,7 +94,7 @@ where
         key: Key<Self::EncryptionKey>,
     ) -> Result<Ciphertext<Vec<u8>>, Self::EncryptionErr> {
         Ok(OneTimePad::default()
-            .encrypt(data, keystream(&self.enc, key, self.nonce)?)
+            .encrypt(data, keystream(&self.enc, key, self.nonce))
             .expect("infinite keystream"))
     }
 }
@@ -97,7 +105,7 @@ where
     Enc::EncryptionBlock: IntoIterator<Item = u8> + AsMut<[u8]> + Default,
     Enc::EncryptionKey: 'static + Clone,
 {
-    type DecryptionErr = BlockSizeTooSmall;
+    type DecryptionErr = Infallible;
     type DecryptionKey = Enc::EncryptionKey;
 
     fn decrypt(
@@ -106,7 +114,7 @@ where
         key: Key<Self::DecryptionKey>,
     ) -> Result<Plaintext<Vec<u8>>, Self::DecryptionErr> {
         Ok(OneTimePad::default()
-            .decrypt(data, keystream(&self.enc, key, self.nonce)?)
+            .decrypt(data, keystream(&self.enc, key, self.nonce))
             .expect("infinite keystream"))
     }
 }
@@ -115,31 +123,24 @@ fn keystream<Enc>(
     enc: &Enc,
     key: Key<Enc::EncryptionKey>,
     nonce: u64,
-) -> Result<Key<impl Iterator<Item = u8> + '_>, BlockSizeTooSmall>
+) -> Key<impl Iterator<Item = u8> + '_>
 where
     Enc: BlockEncrypt,
     Enc::EncryptionBlock: IntoIterator<Item = u8> + AsMut<[u8]> + Default,
     Enc::EncryptionKey: 'static + Clone,
 {
-    // Check that the counter bytes can be packed into the plaintext block.
-    let block_size = mem::size_of::<Enc::EncryptionBlock>();
-    if block_size < mem::size_of_val(&nonce) {
-        return Err(BlockSizeTooSmall);
-    }
-
-    let keystream = iter::successors(Some(nonce), |ctr| Some(ctr.wrapping_add(1)))
-        .map(move |ctr| {
+    Key(
+        iter::successors(Some(nonce), |ctr| Some(ctr.wrapping_add(1))).flat_map(move |ctr| {
             // Copy the counter bytes into a block and encrypt it.
             let mut ctr_block = Enc::EncryptionBlock::default();
             ctr_block
                 .as_mut()
                 .iter_mut()
-                .zip(dbg!(ctr).to_le_bytes().into_iter())
+                .zip(ctr.to_le_bytes())
                 .for_each(|(b, n)| *b = n);
             enc.encrypt(Plaintext(ctr_block), key.clone()).0.into_iter()
-        })
-        .flatten();
-    Ok(Key(keystream))
+        }),
+    )
 }
 
 #[derive(Debug)]

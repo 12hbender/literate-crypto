@@ -17,4 +17,8 @@ mod ecb;
 /// requirements.
 pub trait BlockMode: Cipher {}
 
-pub use {cbc::Cbc, ctr::Ctr, ecb::Ecb};
+pub use {
+    cbc::Cbc,
+    ctr::{BlockSizeTooSmall, Ctr},
+    ecb::Ecb,
+};

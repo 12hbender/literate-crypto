@@ -63,10 +63,22 @@ fn aes_256_cbc_pkcs7() {
 
 #[test]
 fn aes_256_ctr() {
-    test(Ctr::new(Aes256::default(), rand::thread_rng().gen()), 10);
-    test(Ctr::new(Aes256::default(), rand::thread_rng().gen()), 20);
-    test(Ctr::new(Aes256::default(), rand::thread_rng().gen()), 30);
-    test(Ctr::new(Aes256::default(), rand::thread_rng().gen()), 16);
+    test(
+        Ctr::new(Aes256::default(), rand::thread_rng().gen()).unwrap(),
+        10,
+    );
+    test(
+        Ctr::new(Aes256::default(), rand::thread_rng().gen()).unwrap(),
+        20,
+    );
+    test(
+        Ctr::new(Aes256::default(), rand::thread_rng().gen()).unwrap(),
+        30,
+    );
+    test(
+        Ctr::new(Aes256::default(), rand::thread_rng().gen()).unwrap(),
+        16,
+    );
 }
 
 /// Test that a cipher is valid by making sure that

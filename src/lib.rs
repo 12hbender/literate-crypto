@@ -4,6 +4,7 @@
 #![feature(proc_macro_hygiene)]
 #![feature(custom_inner_attributes)]
 #![forbid(unsafe_code)]
+#![feature(impl_trait_in_assoc_type)]
 
 #[cfg(test)]
 mod test;
@@ -27,6 +28,7 @@ pub use {
         BlockDecrypt,
         BlockEncrypt,
         BlockMode,
+        BlockSizeTooSmall,
         Cbc,
         Cipher,
         CipherDecrypt,
@@ -57,6 +59,6 @@ pub use {
         Sha3_384,
         Sha3_512,
     },
-    random::{Csprng, Entropy},
+    random::{Csprng, Entropy, Fortuna},
     text::{Ciphertext, Plaintext},
 };

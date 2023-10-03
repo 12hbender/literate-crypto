@@ -17,6 +17,7 @@ pub use {
         BlockDecrypt,
         BlockEncrypt,
         BlockMode,
+        BlockSizeTooSmall,
         Cbc,
         Ctr,
         Ecb,
