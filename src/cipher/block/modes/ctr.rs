@@ -43,7 +43,7 @@ use {
 /// pad](crate::OneTimePad), where the keystream is generated using the
 /// underlying block cipher and the block counter.
 #[docext]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Ctr<Enc> {
     enc: Enc,
     nonce: u64,

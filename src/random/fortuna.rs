@@ -39,7 +39,7 @@ const RESEED_SIZE: usize = 2048;
 /// of the block cipher. This helps prevent attackers from knowing future
 /// outputs in the case where only the key has been compromised (but not the
 /// internal counter), so the usefulness of this method is somewhat limited.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Fortuna<Ent, Enc = Aes256, H = Sha256> {
     entropy: Ent,
     ctr: Ctr<Enc>,
