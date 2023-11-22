@@ -14,6 +14,7 @@ pub mod doc;
 
 mod cipher;
 mod hash;
+mod pubkey;
 mod random;
 mod text;
 mod util;
