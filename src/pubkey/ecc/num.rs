@@ -147,29 +147,6 @@ fn set_bit<const N: usize>(mut n: [Digit; N], i: usize) -> [Digit; N] {
     n
 }
 
-// TODO I might not even need this
-/// Check if one multi-word unsigned integer is larger than the other.
-fn less<const N: usize>(a: [Digit; N], b: [Digit; N]) -> bool {
-    // Iterate digits from most to least significant.
-    for (a, b) in a.iter().rev().zip(b.iter().rev()) {
-        match a.cmp(b) {
-            cmp::Ordering::Less => {
-                // If a smaller digit is found, then a must be less than b.
-                return true;
-            }
-            cmp::Ordering::Equal => {
-                // Check the next digit.
-            }
-            cmp::Ordering::Greater => {
-                // If a larger digit is found, then a must be greater than b.
-                return false;
-            }
-        }
-    }
-    // All digits were equal.
-    false
-}
-
 /// TODO Document this
 fn resize<const N: usize, const R: usize>(num: [Digit; N]) -> [Digit; R] {
     let mut result = [Digit::default(); R];
