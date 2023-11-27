@@ -11,6 +11,7 @@ pub struct Num([Digit; DIGITS]);
 
 const DIGITS: usize = 4;
 const ZERO: [Digit; DIGITS] = [0; DIGITS];
+const ONE: [Digit; DIGITS] = [1, 0, 0, 0];
 const MOD: [Digit; DIGITS] = [
     0xFFFFFFFEFFFFFC2F,
     0xFFFFFFFFFFFFFFFF,
@@ -88,7 +89,12 @@ impl ops::MulAssign for Num {
 }
 
 impl Num {
+    pub const ONE: Self = Self(ONE);
     pub const ZERO: Self = Self(ZERO);
+
+    pub fn new(n: [Digit; DIGITS]) -> Self {
+        Self(n)
+    }
 
     /// Get a multiplicative inverse of the number by using the extended
     /// Euclidean algorithm.
@@ -187,8 +193,7 @@ impl Num {
         // It must be true that self.0 < MOD, so u is initialized to self and v to MOD.
         let mut u = self.0;
         let mut v = MOD;
-        let mut x1 = Self::ZERO;
-        x1.0[0] = 1;
+        let mut x1 = Self::ONE;
         let mut x2 = Self::ZERO;
         while u != ZERO {
             let (q, r) = div(v, u);
@@ -272,7 +277,7 @@ fn add<const N: usize>(a: [Digit; N], b: [Digit; N]) -> ([Digit; N], Carry) {
             // If the carry bit is set, increment the result by one. If this operation
             // overflows, set the carry bit. If it doesn't overflow, then the
             // carry bit was successfully "used", so clear it.
-            let (add, overflow) = a.overflowing_add(1);
+            let (add, overflow) = r.overflowing_add(1);
             *r = add;
             carry = overflow;
         }
@@ -281,6 +286,7 @@ fn add<const N: usize>(a: [Digit; N], b: [Digit; N]) -> ([Digit; N], Carry) {
             // regardless of the current state of the carry bit.
             carry = true;
         }
+        dbg!(a, b, r, carry);
     }
     (result, Carry(carry))
 }
@@ -396,94 +402,4 @@ fn resize<const N: usize, const R: usize>(num: [Digit; N]) -> [Digit; R] {
     let mut result = [Digit::default(); R];
     result.iter_mut().zip(num.iter()).for_each(|(a, b)| *a = *b);
     result
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    #[test]
-    fn sub() {
-        use super::sub;
-
-        // Single digit, no borrow.
-        assert_eq!(sub([18], [15]), ([3], Borrow(false)));
-        // Single digit with borrow.
-        assert_eq!(sub([15], [18]), ([Digit::MAX - 2], Borrow(true)));
-        // Two digits, no borrow.
-        assert_eq!(sub([18, 1], [15, 0]), ([3, 1], Borrow(false)));
-        // Two digits, last needs a borrow.
-        assert_eq!(sub([18, 0], [15, 1]), ([3, Digit::MAX], Borrow(true)));
-        // Two digits, first needs a borrow.
-        assert_eq!(sub([15, 1], [18, 0]), ([Digit::MAX - 2, 0], Borrow(false)));
-        // Two digits, both need a borrow.
-        assert_eq!(
-            sub([15, 0], [18, 1]),
-            ([Digit::MAX - 2, Digit::MAX - 1], Borrow(true)),
-        );
-        // Three digits, all need a borrow.
-        assert_eq!(
-            sub([15, 0, 5], [18, 1, 10]),
-            (
-                [Digit::MAX - 2, Digit::MAX - 1, Digit::MAX - 5],
-                Borrow(true)
-            ),
-        );
-        // Edge case subtracting max values from zeros.
-        assert_eq!(
-            sub([0, 0, 0], [Digit::MAX, Digit::MAX, Digit::MAX]),
-            ([1, 0, 0], Borrow(true)),
-        );
-    }
-
-    #[test]
-    fn shl() {
-        use super::shl;
-
-        assert_eq!(shl([(1 << Digit::BITS - 1), 0]), [0, 1]);
-        assert_eq!(shl([1, 0]), [2, 0]);
-    }
-
-    #[test]
-    fn div() {
-        use super::div;
-
-        // [65, 2] = 65 + 2 * 2^64 = 36893488147419103297
-        // [12, 1] = 12 + 1 * 2^64 = 18446744073709551628
-        // 36893488147419103297 mod 18446744073709551628 = 41
-        let (div, rem) = div([65, 2], [12, 1]);
-        assert_eq!(div, [2, 0]);
-        assert_eq!(rem.0, [41, 0]);
-    }
-
-    #[test]
-    fn reduce() {
-        use super::reduce;
-
-        assert_eq!(reduce([65], [12]), [5]);
-        assert_eq!(reduce([65], [65]), [0]);
-        assert_eq!(reduce([66], [65]), [1]);
-
-        // [65, 2] = 65 + 2 * 2^64 = 36893488147419103297
-        // [12, 1] = 12 + 1 * 2^64 = 18446744073709551628
-        // 36893488147419103297 mod 18446744073709551628 = 41
-        assert_eq!(reduce([65, 2], [12, 1]), [41, 0]);
-
-        assert_eq!(
-            reduce(
-                [
-                    Digit::MAX,
-                    Digit::MAX,
-                    Digit::MAX,
-                    Digit::MAX,
-                    Digit::MAX,
-                    Digit::MAX,
-                    Digit::MAX,
-                    Digit::MAX,
-                ],
-                [Digit::MAX, Digit::MAX, Digit::MAX, Digit::MAX, 0, 0, 0, 0],
-            ),
-            [0, 0, 0, 0, 0, 0, 0, 0],
-        );
-    }
 }

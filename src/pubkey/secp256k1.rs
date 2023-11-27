@@ -1,5 +1,5 @@
-use field::Num;
+mod field;
 
-pub mod field;
+pub use field::Num;
 
 //const P: Num = todo!();
