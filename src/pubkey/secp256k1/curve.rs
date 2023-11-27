@@ -25,13 +25,19 @@ impl ops::Add for Point {
             }
             (Finiteness::Finite(x1, y1), Finiteness::Finite(x2, y2)) if x1 == x2 && y1 == y2 => {
                 // Special formula for adding a point to itself, aka point doubling.
-                let h = Num::THREE * x1 * x1 * (Num::TWO * y1).inv();
+                let Some(inv) = (Num::TWO * y1).inv() else {
+                    return Self(Finiteness::Infinite);
+                };
+                let h = Num::THREE * x1 * x1 * inv;
                 let x = h * h - Num::TWO * x1;
                 Self(Finiteness::Finite(x, h * (x1 - x) - y1))
             }
             (Finiteness::Finite(x1, y1), Finiteness::Finite(x2, y2)) => {
                 // Regular point addition formula.
-                let h = (y2 - y1) * (x2 - x1).inv();
+                let Some(inv) = (x2 - x1).inv() else {
+                    return Self(Finiteness::Infinite);
+                };
+                let h = (y2 - y1) * inv;
                 let x = h * h - x1 - x2;
                 Self(Finiteness::Finite(x, h * (x1 - x) - y1))
             }

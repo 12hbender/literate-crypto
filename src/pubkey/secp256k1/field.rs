@@ -101,7 +101,8 @@ impl Num {
     }
 
     /// Get a multiplicative inverse of the number by using the extended
-    /// Euclidean algorithm.
+    /// Euclidean algorithm. Returns `None` for [`Num::ZERO`], since 0 has no
+    /// inverse.
     ///
     /// The non-extended Euclidean algorithm computes the greatest common
     /// divisor $gcd(a, b)$ given $a, b, a \leq b$. It relies on the following
@@ -193,9 +194,9 @@ impl Num {
     /// optimization.
     #[docext]
     #[must_use]
-    pub fn inv(&self) -> Self {
+    pub fn inv(&self) -> Option<Self> {
         if *self == Self::ZERO {
-            panic!("zero has no inverse")
+            return None;
         }
 
         // It must be true that self.0 < MOD, so u is initialized to self and v to MOD.
@@ -211,7 +212,7 @@ impl Num {
             x2 = x1;
             x1 = x;
         }
-        x2
+        Some(x2)
     }
 
     /// Get the bit at the given index. The rightmost (least significant) bit is
