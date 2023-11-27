@@ -1,14 +1,22 @@
 // TODO Rename this module to field, rename the ecc module to secp256k1
 
-use std::{iter, ops};
+use {
+    docext::docext,
+    std::{iter, ops},
+};
 
 /// TODO This is little-endian, i.e. least significant byte first.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct Num([Digit; DIGITS]);
 
 const DIGITS: usize = 4;
-// TODO Hardcode this correctly
-const MOD: [Digit; DIGITS] = [0; DIGITS];
+const ZERO: [Digit; DIGITS] = [0; DIGITS];
+const MOD: [Digit; DIGITS] = [
+    0xFFFFFFFEFFFFFC2F,
+    0xFFFFFFFFFFFFFFFF,
+    0xFFFFFFFFFFFFFFFF,
+    0xFFFFFFFFFFFFFFFF,
+];
 
 type Digit = u64;
 type DoubleDigit = u128;
@@ -61,7 +69,138 @@ impl ops::Mul for Num {
     }
 }
 
-// TODO Verify that I also need inversion - I do
+impl ops::AddAssign for Num {
+    fn add_assign(&mut self, rhs: Self) {
+        *self = *self + rhs;
+    }
+}
+
+impl ops::SubAssign for Num {
+    fn sub_assign(&mut self, rhs: Self) {
+        *self = *self - rhs;
+    }
+}
+
+impl ops::MulAssign for Num {
+    fn mul_assign(&mut self, rhs: Self) {
+        *self = *self * rhs;
+    }
+}
+
+impl Num {
+    pub const ZERO: Self = Self(ZERO);
+
+    /// Get a multiplicative inverse of the number by using the extended
+    /// Euclidean algorithm.
+    ///
+    /// The non-extended Euclidean algorithm computes the greatest common
+    /// divisor $gcd(a, b)$ given $a, b, a \leq b$. It relies on the following
+    /// fact: $gcd(a, b) = gcd(b - \lfloor \frac{b}{a} \rfloor a, a)$. This fact
+    /// allows the algorithm to successively reduce the values of $a$ and
+    /// $b$ until one is eventually equal to zero, and the other is equal to
+    /// the greatest common divisor. The algorithm operates as follows:
+    ///
+    /// - Set $u = a, v = b$. The algorithm maintains the invariant that $u \leq
+    ///   v$.
+    /// - Iteratively update $u$ and $v$. First, get the quotient $q = \lfloor
+    ///   \frac{v}{u} \rfloor$, then set the new values $v' = u, u' = v - qu$.
+    ///   Note that $v - qu$ is the remainder from dividing $v$ by $u$. Call
+    ///   this remainder $r$, so that $u = r$.
+    /// - Terminate when $u = 0$. $v$ is the greatest common divisor.
+    ///
+    /// To extend the algorithm above, apply Bezout's identity. This identity
+    /// states that, given two integers $a$ and $b$ with greatest common
+    /// divisor $d$, there exist integers $x$ and $y$ such that $ax + by =
+    /// d$.
+    ///
+    /// The extended algorithm will represent $u$ and $v$ as
+    ///
+    /// $$
+    /// u = x_1a + y_1b \\
+    /// v = x_2a + y_2b
+    /// $$
+    ///
+    /// Since $u$ should be initialized to $a$, and $v$ should
+    /// be initialized to $b$, the initial values for $x_{1, 2}$ and $y_{1,
+    /// 2}$ are $x_1 = 1, y_1 = 0, x_2 = 0, y_2 = 1$.
+    ///
+    /// The rest of the algorithm is exactly the same, except that apart from
+    /// updating $u$ and $v$ like the regular Euclidean algorithm, the
+    /// extended Euclidean algorithm also updates $x_{1, 2}$ and $y_{1, 2}$.
+    /// This is done as follows:
+    ///
+    /// $$
+    /// x_2' = x_1 \\
+    /// x_1' = x_2 - qx_1 \\
+    /// y_2' = y_1 \\
+    /// y_1' = y_2 - qy_1
+    /// $$
+    ///
+    /// Where $q = \lfloor \frac{v}{u} \rfloor$ is the quotient and $r = v - qu$
+    /// is the remainder, same as in the non-extended Euclidean algorithm. It is
+    /// not difficult to verify that the values for $x_{1, 2}'$ and $y_{1, 2}'$
+    /// are correct. Namely, it must be true that $v' = u$ and $u' = r$ as in
+    /// the non-extended Euclidean algorithm. This can be shown with a few
+    /// substitutions:
+    ///
+    /// $$
+    /// v' = x_2'a + y_2'b \\
+    /// v' = x_1a + y_1 b \\
+    /// v' = u
+    /// $$
+    ///
+    /// And
+    ///
+    /// $$
+    /// u' = x_1'a + y_1'b \\
+    /// u' = (x_2 - qx_1)a + (y_2 - qy_1)b \\
+    /// u' = ax_2 + by_2 - (ax_1 + by_1)q \\
+    /// u' = v - qu
+    /// $$
+    ///
+    /// So $v' = u, u' = v - qu$ as expected. The algorithm terminates when $u =
+    /// 0$, at which point $x_2$, $y_2$, and $v$ are the result of the
+    /// algorithm.
+    ///
+    /// Finally, the above can be used to get a multiplicative inverse. If $b$
+    /// (or $a$) is prime, the result of the algorithm will be $v = 1$ because
+    /// the greatest common divisor between a prime number and any other
+    /// number is 1.
+    ///
+    /// $$
+    /// v = 1 = x_2a + y_2b
+    /// $$
+    ///
+    /// If the operations are done in a prime field with order $b$, then
+    ///
+    /// $$
+    /// y_2b \equiv 0 \pmod b \implies v \equiv x_2a \equiv 1 \pmod b
+    /// $$
+    ///
+    /// This means that $x_2$ is the multiplicative inverse of $a$
+    /// in the prime field with order $b$. Finally, since $y_1$ and $y_2$ are
+    /// not used, they can be omitted from the algorithm as a small
+    /// optimization.
+    #[docext]
+    #[must_use]
+    pub fn inv(&self) -> Self {
+        // It must be true that self.0 < MOD, so u is initialized to self and v to MOD.
+        let mut u = self.0;
+        let mut v = MOD;
+        let mut x1 = Self::ZERO;
+        x1.0[0] = 1;
+        let mut x2 = Self::ZERO;
+        while u != ZERO {
+            let (q, r) = div(v, u);
+            v = u;
+            u = r.0;
+            let x = x2 - Self(q) * x1;
+            x2 = x1;
+            x1 = x;
+        }
+        x2
+    }
+}
 
 /// Flag to indicate if a subtraction resulted in a borrow.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

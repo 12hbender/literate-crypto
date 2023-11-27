@@ -1,4 +1,4 @@
-mod ecc;
+pub mod ecc;
 
 pub struct PublicKey<T>(pub T);
 

@@ -1,5 +1,5 @@
 use num::Num;
 
-mod num;
+pub mod num;
 
 //const P: Num = todo!();
