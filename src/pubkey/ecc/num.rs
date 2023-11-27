@@ -1,4 +1,6 @@
-use std::{cmp, ops};
+// TODO Rename this module to field, rename the ecc module to secp256k1
+
+use std::{iter, ops};
 
 /// TODO This is little-endian, i.e. least significant byte first.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
@@ -9,18 +11,57 @@ const DIGITS: usize = 4;
 const MOD: [Digit; DIGITS] = [0; DIGITS];
 
 type Digit = u64;
+type DoubleDigit = u128;
 
 impl ops::Add for Num {
     type Output = Self;
 
     fn add(self, rhs: Self) -> Self::Output {
         let (n, carry) = add(self.0, rhs.0);
-        // TODO Special handling for carry, figure it out
-        Self(reduce(n, MOD))
+        if carry.0 {
+            // To account for the carry bit, extend n by a single most significant byte
+            // equal to 1, then do the reduction.
+            let mut ext = [Digit::default(); DIGITS + 1];
+            ext.iter_mut()
+                .zip(n.into_iter().chain(iter::once(1)))
+                .for_each(|(a, b)| *a = b);
+            Self(resize(reduce(ext, MOD)))
+        } else {
+            Self(reduce(n, MOD))
+        }
     }
 }
 
-// TODO Verify that I also need inversion
+impl ops::Sub for Num {
+    type Output = Self;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        let (n, borrow) = sub(self.0, rhs.0);
+        if borrow.0 {
+            // If there was a borrow, then the result is negative, so add MOD to
+            // make it positive. This addition is guaranteed to result in a carry, and the
+            // carry and borrow bits "cancel" each other out. Note that adding
+            // MOD in a prime field modulus MOD is a no-op, and also note that
+            // self and rhs are both already reduced modulus MOD before the
+            // subtraction.
+            let (add, carry) = add(n, MOD);
+            assert!(carry.0);
+            Self(add)
+        } else {
+            Self(n)
+        }
+    }
+}
+
+impl ops::Mul for Num {
+    type Output = Self;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        Self(reduce(mul(self.0, rhs.0), MOD))
+    }
+}
+
+// TODO Verify that I also need inversion - I do
 
 /// Flag to indicate if a subtraction resulted in a borrow.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -34,7 +75,7 @@ struct Carry(bool);
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct Rem<const N: usize>([Digit; N]);
 
-/// Subtract two multi-word unsigned integers.
+/// Subtract two numbers.
 #[must_use]
 fn sub<const N: usize>(a: [Digit; N], b: [Digit; N]) -> ([Digit; N], Borrow) {
     // The easiest way to understand this code is to do subtractions on paper and
@@ -45,7 +86,7 @@ fn sub<const N: usize>(a: [Digit; N], b: [Digit; N]) -> ([Digit; N], Borrow) {
     // includes a borrow bit.
     // The only difference is that in this implementation digits range from 0 to
     // Digit::MAX, whereas on paper they range from 0 to 9, and they are stored in
-    // little-endian order, whereas on paper they are big-endian.
+    // LSB-first order, whereas on paper they are MSB-first.
     let mut borrow = false;
     let mut result = [Digit::default(); N];
     for ((a, b), r) in a.iter().zip(&b).zip(result.iter_mut()) {
@@ -79,14 +120,48 @@ fn sub<const N: usize>(a: [Digit; N], b: [Digit; N]) -> ([Digit; N], Borrow) {
     (result, Borrow(borrow))
 }
 
+/// Add two numbers.
 #[must_use]
 fn add<const N: usize>(a: [Digit; N], b: [Digit; N]) -> ([Digit; N], Carry) {
-    todo!()
+    // Same as addition on paper.
+    let mut carry = false;
+    let mut result = [Digit::default(); N];
+    for ((a, b), r) in a.iter().zip(&b).zip(result.iter_mut()) {
+        let (add, overflow) = a.overflowing_add(*b);
+        *r = add;
+        if carry {
+            // If the carry bit is set, increment the result by one. If this operation
+            // overflows, set the carry bit. If it doesn't overflow, then the
+            // carry bit was successfully "used", so clear it.
+            let (add, overflow) = a.overflowing_add(1);
+            *r = add;
+            carry = overflow;
+        }
+        if overflow {
+            // If the original addition overflowed, there was a carry. This is true
+            // regardless of the current state of the carry bit.
+            carry = true;
+        }
+    }
+    (result, Carry(carry))
 }
 
-// TODO Document this in detail, like the above
+/// Divide two numbers.
 #[must_use]
 fn div<const N: usize>(n: [Digit; N], d: [Digit; N]) -> ([Digit; N], Rem<N>) {
+    // This is an implementation of long division. It's the same as long division
+    // done on paper, except it's done in base 2 instead of base 10. The easiest
+    // way to understand the algorithm is to do an example on paper in base ten,
+    // e.g. 587 / 342, and see how the base 2 algorithm below corresponds to the
+    // base 10 algorithm done on paper.
+    //
+    // The long division algorithm can be roughly explained in words as follows:
+    // keep track of a running remainder. For each digit of the dividend, append
+    // the digit to the running remainder. Count how many times the divisor can
+    // be subtracted from the running remainder, do the subtractions, and append
+    // the count to the result as a single digit. Note that the count may be zero.
+    // The algorithm finishes when there are no more digits in the dividend,
+    // resulting in a quotient and a remainder.
     let mut q = [Digit::default(); N];
     let mut r = [Digit::default(); N];
     for i in (0..N * Digit::BITS as usize).rev() {
@@ -96,11 +171,40 @@ fn div<const N: usize>(n: [Digit; N], d: [Digit; N]) -> ([Digit; N], Rem<N>) {
         }
         let (sub, borrow) = sub(r, d);
         if !borrow.0 {
+            // The subtraction didn't require a borrow, which means that r >= d, i.e. the
+            // subtraction was successful.
             r = sub;
+            // Because this is long division in base 2, only a 1 or a 0 can be appended
+            // to the result. In case of successful division, a 1 is appended, and at most
+            // one subtraction is made to the running remainder. This is different from long
+            // division in base 10, where any digit from 0 to 9 can be appended,
+            // and at most nine subtractions could be made (although in practice
+            // a human does not subtract 9 times, instead he divides two small numbers in
+            // his head).
             q = set_bit(q, i);
         }
     }
     (q, Rem(r))
+}
+
+/// Multiply two numbers.
+#[must_use]
+fn mul(a: [Digit; DIGITS], b: [Digit; DIGITS]) -> [Digit; 2 * DIGITS] {
+    // Same as multiplication on paper.
+    let mut result = [Digit::default(); DIGITS * 2];
+    for (i, a) in a.into_iter().enumerate() {
+        let mut carry = DoubleDigit::default();
+        for (j, b) in b.into_iter().enumerate() {
+            let m = result[i + j] as DoubleDigit + a as DoubleDigit * b as DoubleDigit + carry;
+            // The upper Digit::BITS are the carry part.
+            carry = (m & ((Digit::MAX as DoubleDigit) << Digit::BITS)) >> Digit::BITS;
+            // The lower Digit::BITS are the digit to store at i + j.
+            result[i + j] = Digit::try_from(m & Digit::MAX as DoubleDigit).unwrap();
+        }
+        // The final carry becomes the next digit over.
+        result[i + DIGITS] = Digit::try_from(carry).unwrap();
+    }
+    result
 }
 
 /// Reduce a number modulo another number.
@@ -147,7 +251,8 @@ fn set_bit<const N: usize>(mut n: [Digit; N], i: usize) -> [Digit; N] {
     n
 }
 
-/// TODO Document this
+/// Resize a number into a different width by either appending zeros to the more
+/// significant bytes, or by dropping the most significant bytes.
 fn resize<const N: usize, const R: usize>(num: [Digit; N]) -> [Digit; R] {
     let mut result = [Digit::default(); R];
     result.iter_mut().zip(num.iter()).for_each(|(a, b)| *a = *b);
