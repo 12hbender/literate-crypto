@@ -11,7 +11,6 @@ pub struct Num([Digit; DIGITS]);
 
 const DIGITS: usize = 4;
 const ZERO: [Digit; DIGITS] = [0; DIGITS];
-const ONE: [Digit; DIGITS] = [1, 0, 0, 0];
 const MOD: [Digit; DIGITS] = [
     0xFFFFFFFEFFFFFC2F,
     0xFFFFFFFFFFFFFFFF,
@@ -89,8 +88,13 @@ impl ops::MulAssign for Num {
 }
 
 impl Num {
-    pub const ONE: Self = Self(ONE);
+    pub const BITS: usize = DIGITS * Digit::BITS as usize;
+
     pub const ZERO: Self = Self(ZERO);
+    pub const ONE: Self = Self([1, 0, 0, 0]);
+    pub const TWO: Self = Self([2, 0, 0, 0]);
+    pub const THREE: Self = Self([3, 0, 0, 0]);
+    pub const SEVEN: Self = Self([7, 0, 0, 0]);
 
     pub fn new(n: [Digit; DIGITS]) -> Self {
         Self(n)
@@ -190,6 +194,10 @@ impl Num {
     #[docext]
     #[must_use]
     pub fn inv(&self) -> Self {
+        if *self == Self::ZERO {
+            panic!("zero has no inverse")
+        }
+
         // It must be true that self.0 < MOD, so u is initialized to self and v to MOD.
         let mut u = self.0;
         let mut v = MOD;
@@ -204,6 +212,12 @@ impl Num {
             x1 = x;
         }
         x2
+    }
+
+    /// Get the bit at the given index. The rightmost (least significant) bit is
+    /// at index 0.
+    pub fn get_bit(&self, i: usize) -> bool {
+        get_bit(self.0, i)
     }
 }
 
@@ -377,8 +391,8 @@ fn shl<const N: usize>(n: [Digit; N]) -> [Digit; N] {
     res
 }
 
-/// Get the bit at the given index. Note that the rightmost bit is at index
-/// 0, the leftmost at index 255.
+/// Get the bit at the given index. The rightmost (least significant) bit is at
+/// index 0.
 #[must_use]
 fn get_bit<const N: usize>(n: [Digit; N], i: usize) -> bool {
     let digit = i / Digit::BITS as usize;

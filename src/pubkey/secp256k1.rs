@@ -1,5 +1,4 @@
+mod curve;
 mod field;
 
-pub use field::Num;
-
-//const P: Num = todo!();
+pub use {curve::Point, field::Num};
