@@ -1,4 +1,4 @@
-pub mod ecc;
+pub mod secp256k1;
 
 pub struct PublicKey<T>(pub T);
 

@@ -1,4 +1,4 @@
-// TODO Rename this module to field, rename the ecc module to secp256k1
+//! Prime field arithmetic for the secp256k1 curve.
 
 use {
     docext::docext,
