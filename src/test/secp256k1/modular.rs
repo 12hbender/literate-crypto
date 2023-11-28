@@ -49,7 +49,7 @@
 //!    print("let cases = ", result, ";")
 //! ```
 
-use crate::secp256k1::Num;
+use crate::secp256k1::{Num, P};
 
 /// Assert that adding two numbers returns the expected result.
 #[test]
@@ -258,10 +258,10 @@ fn addition() {
     ];
 
     for [a, b, c] in cases {
-        let a = Num::new(a);
-        let b = Num::new(b);
-        let c = Num::new(c);
-        assert_eq!(a + b, c);
+        let a = Num::from_le_words(a);
+        let b = Num::from_le_words(b);
+        let c = Num::from_le_words(c);
+        assert_eq!(a.add(b, P), c);
     }
 }
 
@@ -472,10 +472,10 @@ fn subtraction() {
     ];
 
     for [a, b, c] in cases {
-        let a = Num::new(a);
-        let b = Num::new(b);
-        let c = Num::new(c);
-        assert_eq!(a - b, c);
+        let a = Num::from_le_words(a);
+        let b = Num::from_le_words(b);
+        let c = Num::from_le_words(c);
+        assert_eq!(a.sub(b, P), c);
     }
 }
 
@@ -686,10 +686,10 @@ fn multiplication() {
     ];
 
     for [a, b, c] in cases {
-        let a = Num::new(a);
-        let b = Num::new(b);
-        let c = Num::new(c);
-        assert_eq!(a * b, c);
+        let a = Num::from_le_words(a);
+        let b = Num::from_le_words(b);
+        let c = Num::from_le_words(c);
+        assert_eq!(a.mul(b, P), c);
     }
 }
 
@@ -760,7 +760,30 @@ fn inversion() {
     ];
 
     for n in cases {
-        let n = Num::new(n);
-        assert_eq!(n * n.inv(), Num::ONE);
+        let n = Num::from_le_words(n);
+        assert_eq!(n.mul(n.inv(P).unwrap(), P), Num::ONE);
     }
+}
+
+/// Assert that inverting zero returns `None`.
+#[test]
+fn inv_zero() {
+    assert_eq!(Num::ZERO.inv(P), None);
+}
+
+/// Test that modular equality returns the expected result.
+#[test]
+fn equality() {
+    let n = Num::from_le_words([
+        10952063692820712150,
+        4107566514971989675,
+        14334172746451041540,
+        16336111428691836948,
+    ]);
+
+    assert!(!n.eq(Num::ONE, Num::TWO));
+    assert!(n.eq(Num::ZERO, Num::TWO));
+    assert!(n.eq(Num::ONE, Num::THREE));
+    assert!(n.eq(Num::TWO, Num::SEVEN));
+    assert!(n.eq(Num::ZERO, n));
 }

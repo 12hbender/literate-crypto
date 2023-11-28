@@ -6,8 +6,8 @@
 
 use {
     crate::{Aes128, Aes192, Aes256, Cbc, Cipher, Ctr, Ecb, Key, Pkcs7, Plaintext},
-    core::fmt,
     rand::Rng,
+    std::fmt,
 };
 
 #[test]

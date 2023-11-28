@@ -60,7 +60,7 @@ pub use {
         Sha3_384,
         Sha3_512,
     },
-    pubkey::secp256k1,
+    pubkey::{secp256k1, Secp256k1Ecdsa, SignatureScheme},
     random::{Csprng, Entropy, Fortuna},
     text::{Ciphertext, Plaintext},
 };

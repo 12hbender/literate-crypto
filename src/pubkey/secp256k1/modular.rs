@@ -1,8 +1,9 @@
-//! Prime field arithmetic for the secp256k1 curve.
+//! 256-bit modular arithmetic.
 
 use {
+    super::Point,
     docext::docext,
-    std::{iter, ops},
+    std::{cmp, iter, mem, ops},
 };
 
 /// TODO This is little-endian, i.e. least significant byte first.
@@ -11,84 +12,13 @@ pub struct Num([Digit; DIGITS]);
 
 const DIGITS: usize = 4;
 const ZERO: [Digit; DIGITS] = [0; DIGITS];
-const MOD: [Digit; DIGITS] = [
-    0xFFFFFFFEFFFFFC2F,
-    0xFFFFFFFFFFFFFFFF,
-    0xFFFFFFFFFFFFFFFF,
-    0xFFFFFFFFFFFFFFFF,
-];
 
 type Digit = u64;
 type DoubleDigit = u128;
 
-impl ops::Add for Num {
-    type Output = Self;
-
-    fn add(self, rhs: Self) -> Self::Output {
-        let (n, carry) = add(self.0, rhs.0);
-        if carry.0 {
-            // To account for the carry bit, extend n by a single most significant byte
-            // equal to 1, then do the reduction.
-            let mut ext = [Digit::default(); DIGITS + 1];
-            ext.iter_mut()
-                .zip(n.into_iter().chain(iter::once(1)))
-                .for_each(|(a, b)| *a = b);
-            Self(resize(reduce(ext, MOD)))
-        } else {
-            Self(reduce(n, MOD))
-        }
-    }
-}
-
-impl ops::Sub for Num {
-    type Output = Self;
-
-    fn sub(self, rhs: Self) -> Self::Output {
-        let (n, borrow) = sub(self.0, rhs.0);
-        if borrow.0 {
-            // If there was a borrow, then the result is negative, so add MOD to
-            // make it positive. This addition is guaranteed to result in a carry, and the
-            // carry and borrow bits "cancel" each other out. Note that adding
-            // MOD in a prime field modulus MOD is a no-op, and also note that
-            // self and rhs are both already reduced modulus MOD before the
-            // subtraction.
-            let (add, carry) = add(n, MOD);
-            assert!(carry.0);
-            Self(add)
-        } else {
-            Self(n)
-        }
-    }
-}
-
-impl ops::Mul for Num {
-    type Output = Self;
-
-    fn mul(self, rhs: Self) -> Self::Output {
-        Self(reduce(mul(self.0, rhs.0), MOD))
-    }
-}
-
-impl ops::AddAssign for Num {
-    fn add_assign(&mut self, rhs: Self) {
-        *self = *self + rhs;
-    }
-}
-
-impl ops::SubAssign for Num {
-    fn sub_assign(&mut self, rhs: Self) {
-        *self = *self - rhs;
-    }
-}
-
-impl ops::MulAssign for Num {
-    fn mul_assign(&mut self, rhs: Self) {
-        *self = *self * rhs;
-    }
-}
-
 impl Num {
     pub const BITS: usize = DIGITS * Digit::BITS as usize;
+    pub const BYTES: usize = Self::BITS / 8;
 
     pub const ZERO: Self = Self(ZERO);
     pub const ONE: Self = Self([1, 0, 0, 0]);
@@ -96,13 +26,93 @@ impl Num {
     pub const THREE: Self = Self([3, 0, 0, 0]);
     pub const SEVEN: Self = Self([7, 0, 0, 0]);
 
-    pub fn new(n: [Digit; DIGITS]) -> Self {
+    pub const fn from_le_words(n: [Digit; DIGITS]) -> Self {
         Self(n)
     }
 
-    /// Get a multiplicative inverse of the number by using the extended
-    /// Euclidean algorithm. Returns `None` for [`Num::ZERO`], since 0 has no
-    /// inverse.
+    pub fn from_le_bytes(b: [u8; DIGITS * mem::size_of::<Digit>()]) -> Self {
+        const S: usize = mem::size_of::<Digit>();
+        Self::from_le_words([
+            Digit::from_le_bytes(b[..S].try_into().unwrap()),
+            Digit::from_le_bytes(b[S..2 * S].try_into().unwrap()),
+            Digit::from_le_bytes(b[2 * S..3 * S].try_into().unwrap()),
+            Digit::from_le_bytes(b[3 * S..4 * S].try_into().unwrap()),
+        ])
+    }
+
+    pub fn to_le_bytes(&self) -> [u8; DIGITS * mem::size_of::<Digit>()] {
+        let mut result = [0u8; DIGITS * mem::size_of::<Digit>()];
+        result
+            .iter_mut()
+            .zip(self.0.iter().flat_map(|n| n.to_le_bytes()))
+            .for_each(|(a, b)| *a = b);
+        result
+    }
+
+    /// Modular addition.
+    #[must_use]
+    pub fn add(&self, n: Self, p: Self) -> Self {
+        let (n, carry) = add(self.0, n.0);
+        if carry.0 {
+            // To account for the carry bit, extend n by a single most significant byte
+            // equal to 1, then do the reduction.
+            let mut ext = [Digit::default(); DIGITS + 1];
+            ext.iter_mut()
+                .zip(n.into_iter().chain(iter::once(1)))
+                .for_each(|(a, b)| *a = b);
+            Self(reduce(ext, p.0))
+        } else {
+            Self(reduce(n, p.0))
+        }
+    }
+
+    /// Modular subtraction.
+    #[must_use]
+    pub fn sub(self, n: Self, p: Self) -> Self {
+        let (n, borrow) = sub(self.0, n.0);
+        if borrow.0 {
+            // If there was a borrow, then the result is negative, so add MOD to
+            // make it positive. This addition is guaranteed to result in a carry, and the
+            // carry and borrow bits "cancel" each other out. Note that adding
+            // MOD in a prime field modulus MOD is a no-op, and also note that
+            // self and rhs are both already reduced modulus MOD before the
+            // subtraction.
+            let (add, carry) = add(n, p.0);
+            assert!(carry.0);
+            Self(add)
+        } else {
+            Self(n)
+        }
+    }
+
+    /// Modular multiplication.
+    #[must_use]
+    pub fn mul(self, n: Self, p: Self) -> Self {
+        // Same as multiplication on paper.
+        let mut prod = [Digit::default(); DIGITS * 2];
+        for (i, a) in self.0.into_iter().enumerate() {
+            let mut carry = DoubleDigit::default();
+            for (j, b) in n.0.into_iter().enumerate() {
+                let m = prod[i + j] as DoubleDigit + a as DoubleDigit * b as DoubleDigit + carry;
+                // The upper Digit::BITS are the carry part.
+                carry = (m & ((Digit::MAX as DoubleDigit) << Digit::BITS)) >> Digit::BITS;
+                // The lower Digit::BITS are the digit to store at i + j.
+                prod[i + j] = Digit::try_from(m & Digit::MAX as DoubleDigit).unwrap();
+            }
+            // The final carry becomes the next digit over.
+            prod[i + DIGITS] = Digit::try_from(carry).unwrap();
+        }
+        Self(reduce(prod, p.0))
+    }
+
+    /// Modular equality.
+    pub fn eq(self, n: Self, p: Self) -> bool {
+        reduce(self.0, p.0) == reduce(n.0, p.0)
+    }
+
+    /// Get the modular multiplicative inverse of the number by using the
+    /// extended Euclidean algorithm. Returns `None` for [`Num::ZERO`],
+    /// since 0 has no inverse.
     ///
     /// The non-extended Euclidean algorithm computes the greatest common
     /// divisor $gcd(a, b)$ given $a, b, a \leq b$. It relies on the following
@@ -194,21 +204,20 @@ impl Num {
     /// optimization.
     #[docext]
     #[must_use]
-    pub fn inv(&self) -> Option<Self> {
+    pub fn inv(&self, p: Self) -> Option<Self> {
         if *self == Self::ZERO {
             return None;
         }
 
-        // It must be true that self.0 < MOD, so u is initialized to self and v to MOD.
-        let mut u = self.0;
-        let mut v = MOD;
+        let mut u = reduce(self.0, p.0);
+        let mut v = p.0;
         let mut x1 = Self::ONE;
         let mut x2 = Self::ZERO;
         while u != ZERO {
             let (q, r) = div(v, u);
             v = u;
             u = r.0;
-            let x = x2 - Self(q) * x1;
+            let x = x2.sub(Self(q).mul(x1, p), p);
             x2 = x1;
             x1 = x;
         }
@@ -219,6 +228,34 @@ impl Num {
     /// at index 0.
     pub fn get_bit(&self, i: usize) -> bool {
         get_bit(self.0, i)
+    }
+}
+
+impl cmp::PartialOrd for Num {
+    fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl cmp::Ord for Num {
+    fn cmp(&self, other: &Self) -> cmp::Ordering {
+        // Compare the digits in most-significant-first order.
+        for (a, b) in self.0.iter().zip(other.0.iter()).rev() {
+            match a.cmp(b) {
+                cmp::Ordering::Less => return cmp::Ordering::Less,
+                cmp::Ordering::Equal => {}
+                cmp::Ordering::Greater => return cmp::Ordering::Greater,
+            }
+        }
+        cmp::Ordering::Equal
+    }
+}
+
+impl ops::Mul<Point> for Num {
+    type Output = Point;
+
+    fn mul(self, rhs: Point) -> Self::Output {
+        rhs.scale(self)
     }
 }
 
@@ -301,7 +338,6 @@ fn add<const N: usize>(a: [Digit; N], b: [Digit; N]) -> ([Digit; N], Carry) {
             // regardless of the current state of the carry bit.
             carry = true;
         }
-        dbg!(a, b, r, carry);
     }
     (result, Carry(carry))
 }
@@ -345,26 +381,6 @@ fn div<const N: usize>(n: [Digit; N], d: [Digit; N]) -> ([Digit; N], Rem<N>) {
         }
     }
     (q, Rem(r))
-}
-
-/// Multiply two numbers.
-#[must_use]
-fn mul(a: [Digit; DIGITS], b: [Digit; DIGITS]) -> [Digit; 2 * DIGITS] {
-    // Same as multiplication on paper.
-    let mut result = [Digit::default(); DIGITS * 2];
-    for (i, a) in a.into_iter().enumerate() {
-        let mut carry = DoubleDigit::default();
-        for (j, b) in b.into_iter().enumerate() {
-            let m = result[i + j] as DoubleDigit + a as DoubleDigit * b as DoubleDigit + carry;
-            // The upper Digit::BITS are the carry part.
-            carry = (m & ((Digit::MAX as DoubleDigit) << Digit::BITS)) >> Digit::BITS;
-            // The lower Digit::BITS are the digit to store at i + j.
-            result[i + j] = Digit::try_from(m & Digit::MAX as DoubleDigit).unwrap();
-        }
-        // The final carry becomes the next digit over.
-        result[i + DIGITS] = Digit::try_from(carry).unwrap();
-    }
-    result
 }
 
 /// Reduce a number modulo another number.
