@@ -9,16 +9,7 @@
 //! final state (optionally truncated to a smaller size) is the hash digest.
 
 use {
-    crate::{
-        BlockEncrypt,
-        DaviesMeyer,
-        DaviesMeyerStep,
-        Digest,
-        Hash,
-        MerkleDamgard,
-        MerkleDamgardPad,
-        Preimage,
-    },
+    crate::{BlockEncrypt, DaviesMeyer, DaviesMeyerStep, Hash, MerkleDamgard, MerkleDamgardPad},
     docext::docext,
     std::{iter, marker::PhantomData},
 };
@@ -192,18 +183,17 @@ impl Default for Sha1 {
 }
 
 impl Hash for Sha1 {
-    type Output = [u8; 20];
+    type Digest = [u8; 20];
 
-    fn hash(&self, preimage: Preimage<&[u8]>) -> Digest<Self::Output> {
+    fn hash(&self, preimage: &[u8]) -> Self::Digest {
         let mut result = [0; 20];
         self.0
             .hash(preimage)
-            .0
             .into_iter()
             .flat_map(u32::to_be_bytes)
             .zip(result.iter_mut())
             .for_each(|(b, r)| *r = b);
-        Digest(result)
+        result
     }
 }
 
@@ -221,18 +211,17 @@ impl Default for Sha256 {
 }
 
 impl Hash for Sha256 {
-    type Output = [u8; 32];
+    type Digest = [u8; 32];
 
-    fn hash(&self, preimage: Preimage<&[u8]>) -> Digest<Self::Output> {
+    fn hash(&self, preimage: &[u8]) -> Self::Digest {
         let mut result = [0; 32];
         self.0
             .hash(preimage)
-            .0
             .into_iter()
             .flat_map(u32::to_be_bytes)
             .zip(result.iter_mut())
             .for_each(|(b, r)| *r = b);
-        Digest(result)
+        result
     }
 }
 
@@ -250,18 +239,17 @@ impl Default for Sha224 {
 }
 
 impl Hash for Sha224 {
-    type Output = [u8; 28];
+    type Digest = [u8; 28];
 
-    fn hash(&self, preimage: Preimage<&[u8]>) -> Digest<Self::Output> {
+    fn hash(&self, preimage: &[u8]) -> Self::Digest {
         let mut result = [0; 28];
         self.0
             .hash(preimage)
-            .0
             .into_iter()
             .flat_map(u32::to_be_bytes)
             .zip(result.iter_mut())
             .for_each(|(b, r)| *r = b);
-        Digest(result)
+        result
     }
 }
 
@@ -519,14 +507,13 @@ pub struct LengthPadding(());
 impl MerkleDamgardPad for LengthPadding {
     type Block = Block;
 
-    fn pad(&self, preimage: Preimage<&[u8]>) -> impl Iterator<Item = Self::Block> {
+    fn pad(&self, preimage: &[u8]) -> impl Iterator<Item = Self::Block> {
         preimage
-            .0
             .chunks(BLOCK_BYTES)
             .chain(
                 // If the input is a multiple of the block size, a full block of padding needs to
                 // be added.
-                iter::once([].as_slice()).take(if preimage.0.len() % BLOCK_BYTES == 0 {
+                iter::once([].as_slice()).take(if preimage.len() % BLOCK_BYTES == 0 {
                     1
                 } else {
                     0
@@ -542,18 +529,16 @@ impl MerkleDamgardPad for LengthPadding {
                     block[..chunk.len()].copy_from_slice(chunk);
                     block[chunk.len()] = 0x80;
                     let mut next = [0u8; BLOCK_BYTES];
-                    next[BLOCK_BYTES - 8..].copy_from_slice(
-                        &u64::try_from(8 * preimage.0.len()).unwrap().to_be_bytes(),
-                    );
+                    next[BLOCK_BYTES - 8..]
+                        .copy_from_slice(&u64::try_from(8 * preimage.len()).unwrap().to_be_bytes());
                     vec![block, next]
                 } else {
                     // This block needs to be padded.
                     let mut block = [0u8; BLOCK_BYTES];
                     block[..chunk.len()].copy_from_slice(chunk);
                     block[chunk.len()] = 0x80;
-                    block[BLOCK_BYTES - 8..].copy_from_slice(
-                        &u64::try_from(8 * preimage.0.len()).unwrap().to_be_bytes(),
-                    );
+                    block[BLOCK_BYTES - 8..]
+                        .copy_from_slice(&u64::try_from(8 * preimage.len()).unwrap().to_be_bytes());
                     vec![block]
                 }
             })

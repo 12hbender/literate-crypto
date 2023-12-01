@@ -1,7 +1,4 @@
-use {
-    crate::{Digest, Hash, Preimage},
-    docext::docext,
-};
+use {crate::Hash, docext::docext};
 
 mod daviesmeyer;
 
@@ -105,7 +102,7 @@ pub trait CompressionFn {
 pub trait MerkleDamgardPad {
     type Block;
 
-    fn pad(&self, preimage: Preimage<&[u8]>) -> impl Iterator<Item = Self::Block>;
+    fn pad(&self, preimage: &[u8]) -> impl Iterator<Item = Self::Block>;
 }
 
 impl<
@@ -128,15 +125,13 @@ impl<
         Pad: MerkleDamgardPad<Block = Block>,
     > Hash for MerkleDamgard<State, Block, F, Pad>
 {
-    type Output = State;
+    type Digest = State;
 
-    fn hash(&self, preimage: Preimage<&[u8]>) -> Digest<Self::Output> {
-        Digest(
-            self.pad
-                .pad(preimage)
-                .fold(self.iv.clone(), |state, block| {
-                    self.f.compress(state, block)
-                }),
-        )
+    fn hash(&self, preimage: &[u8]) -> Self::Digest {
+        self.pad
+            .pad(preimage)
+            .fold(self.iv.clone(), |state, block| {
+                self.f.compress(state, block)
+            })
     }
 }

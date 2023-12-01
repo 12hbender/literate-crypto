@@ -8,7 +8,6 @@ use {
         Ctr,
         Entropy,
         Hash,
-        Preimage,
         Sha256,
     },
     std::iter,
@@ -58,7 +57,7 @@ impl<Ent, Enc, H> Csprng for Fortuna<Ent, Enc, H>
 where
     Ent: Entropy,
     Enc: BlockEncrypt,
-    H: Hash<Output = Enc::EncryptionKey>,
+    H: Hash<Digest = Enc::EncryptionKey>,
     Enc::EncryptionBlock: IntoIterator<Item = u8> + AsMut<[u8]> + Default,
     Enc::EncryptionKey: 'static + AsRef<[u8]> + Clone + Default,
 {
@@ -68,7 +67,7 @@ impl<Ent, Enc, H> IntoIterator for Fortuna<Ent, Enc, H>
 where
     Ent: Entropy,
     Enc: BlockEncrypt,
-    H: Hash<Output = Enc::EncryptionKey>,
+    H: Hash<Digest = Enc::EncryptionKey>,
     Enc::EncryptionBlock: IntoIterator<Item = u8> + AsMut<[u8]> + Default,
     Enc::EncryptionKey: 'static + AsRef<[u8]> + Clone + Default,
 {
@@ -87,7 +86,7 @@ where
             let mut key_and_seed = Vec::new();
             key_and_seed.extend(key.as_ref());
             key_and_seed.extend(seed);
-            key = self.hash.hash(Preimage(&key_and_seed)).0;
+            key = self.hash.hash(&key_and_seed);
 
             // Generate RESEED_SIZE pseudorandom bytes via the block cipher.
             self.ctr.encrypt(vec![0; RESEED_SIZE], key.clone()).unwrap()

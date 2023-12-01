@@ -5,7 +5,6 @@ use {
         Hash,
         InvalidPrivateKey,
         InvalidSignature,
-        Preimage,
         SignatureScheme,
     },
     std::marker::PhantomData,
@@ -28,7 +27,7 @@ impl<C, H> Ecdsa<C, H> {
 
 impl<C, H, const HO: usize> SignatureScheme for Ecdsa<C, H>
 where
-    H: Hash<Output = [u8; HO]>,
+    H: Hash<Digest = [u8; HO]>,
     C: Curve,
 {
     type PublicKey = PublicKey<C>;
@@ -37,16 +36,16 @@ where
 
     fn sign(&self, key: Self::PrivateKey, data: &[u8]) -> Self::Signature {
         assert!(HO >= C::SIZE);
-        let e = self.hash.hash(Preimage(data));
-        let e = modular::Num::from_le_bytes(resize(e.0));
+        let e = self.hash.hash(data);
+        let e = modular::Num::from_le_bytes(resize(e));
         let mut preimage: Vec<u8> = Default::default();
         preimage.extend(data);
         preimage.extend(key.0.to_le_bytes());
-        let mut k = modular::Num::from_le_bytes(resize(self.hash.hash(Preimage(&preimage)).0));
+        let mut k = modular::Num::from_le_bytes(resize(self.hash.hash(&preimage)));
         let mut r;
         let mut s;
         'retry: loop {
-            k = modular::Num::from_le_bytes(resize(self.hash.hash(Preimage(&k.to_le_bytes())).0));
+            k = modular::Num::from_le_bytes(resize(self.hash.hash(&k.to_le_bytes())));
             r = match (k * C::g()).coordinates() {
                 Coordinates::Infinity => continue 'retry,
                 Coordinates::Finite(x, _) => x,
@@ -72,7 +71,7 @@ where
         sig: &Self::Signature,
     ) -> Result<(), InvalidSignature> {
         assert!(HO >= C::SIZE);
-        let e = modular::Num::from_le_bytes(resize(self.hash.hash(Preimage(data)).0));
+        let e = modular::Num::from_le_bytes(resize(self.hash.hash(data)));
         let i = sig.s.inv(C::N).unwrap();
         let u = e.mul(i, C::N);
         let v = sig.r.mul(i, C::N);

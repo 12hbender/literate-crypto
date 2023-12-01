@@ -23,15 +23,7 @@ pub use {
 /// is by brute force.
 #[docext]
 pub trait Hash {
-    type Output;
+    type Digest;
 
-    fn hash(&self, preimage: Preimage<&[u8]>) -> Digest<Self::Output>;
+    fn hash(&self, preimage: &[u8]) -> Self::Digest;
 }
-
-/// The preimage is an input to a [hash function](Hash).
-#[derive(Debug, Clone, Copy)]
-pub struct Preimage<T>(pub T);
-
-/// The hash digest is the fixed-size output of a [hash function](Hash).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Digest<T>(pub T);
