@@ -1,47 +1,41 @@
-//! 256-bit modular arithmetic.
-
 use {
-    super::Point,
+    crate::ecc::{Curve, Point},
     docext::docext,
     std::{cmp, iter, mem, ops},
 };
 
 /// TODO This is little-endian, i.e. least significant byte first.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
-pub struct Num([Digit; DIGITS]);
+pub struct Num([u64; Self::WIDTH]);
 
-const DIGITS: usize = 4;
-const ZERO: [Digit; DIGITS] = [0; DIGITS];
-
-type Digit = u64;
-type DoubleDigit = u128;
+pub const ZERO: Num = Num([0, 0, 0, 0]);
+pub const ONE: Num = Num([1, 0, 0, 0]);
+pub const TWO: Num = Num([2, 0, 0, 0]);
+pub const THREE: Num = Num([3, 0, 0, 0]);
+pub const SEVEN: Num = Num([7, 0, 0, 0]);
 
 impl Num {
-    pub const BITS: usize = DIGITS * Digit::BITS as usize;
+    // TODO Change this to 8
+    pub const WIDTH: usize = 4;
+    pub const BITS: usize = Self::WIDTH * u64::BITS as usize;
     pub const BYTES: usize = Self::BITS / 8;
 
-    pub const ZERO: Self = Self(ZERO);
-    pub const ONE: Self = Self([1, 0, 0, 0]);
-    pub const TWO: Self = Self([2, 0, 0, 0]);
-    pub const THREE: Self = Self([3, 0, 0, 0]);
-    pub const SEVEN: Self = Self([7, 0, 0, 0]);
-
-    pub const fn from_le_words(n: [Digit; DIGITS]) -> Self {
+    pub const fn from_le_words(n: [u64; Self::WIDTH]) -> Self {
         Self(n)
     }
 
-    pub fn from_le_bytes(b: [u8; DIGITS * mem::size_of::<Digit>()]) -> Self {
-        const S: usize = mem::size_of::<Digit>();
+    pub fn from_le_bytes(b: [u8; Self::BYTES]) -> Self {
+        const S: usize = mem::size_of::<u64>();
         Self::from_le_words([
-            Digit::from_le_bytes(b[..S].try_into().unwrap()),
-            Digit::from_le_bytes(b[S..2 * S].try_into().unwrap()),
-            Digit::from_le_bytes(b[2 * S..3 * S].try_into().unwrap()),
-            Digit::from_le_bytes(b[3 * S..4 * S].try_into().unwrap()),
+            u64::from_le_bytes(b[..S].try_into().unwrap()),
+            u64::from_le_bytes(b[S..2 * S].try_into().unwrap()),
+            u64::from_le_bytes(b[2 * S..3 * S].try_into().unwrap()),
+            u64::from_le_bytes(b[3 * S..4 * S].try_into().unwrap()),
         ])
     }
 
-    pub fn to_le_bytes(&self) -> [u8; DIGITS * mem::size_of::<Digit>()] {
-        let mut result = [0u8; DIGITS * mem::size_of::<Digit>()];
+    pub fn to_le_bytes(&self) -> [u8; Self::BYTES] {
+        let mut result = [0u8; Self::BYTES];
         result
             .iter_mut()
             .zip(self.0.iter().flat_map(|n| n.to_le_bytes()))
@@ -56,7 +50,7 @@ impl Num {
         if carry.0 {
             // To account for the carry bit, extend n by a single most significant byte
             // equal to 1, then do the reduction.
-            let mut ext = [Digit::default(); DIGITS + 1];
+            let mut ext = [0; Self::WIDTH + 1];
             ext.iter_mut()
                 .zip(n.into_iter().chain(iter::once(1)))
                 .for_each(|(a, b)| *a = b);
@@ -89,18 +83,18 @@ impl Num {
     #[must_use]
     pub fn mul(self, n: Self, p: Self) -> Self {
         // Same as multiplication on paper.
-        let mut prod = [Digit::default(); DIGITS * 2];
+        let mut prod = [0; Self::WIDTH * 2];
         for (i, a) in self.0.into_iter().enumerate() {
-            let mut carry = DoubleDigit::default();
+            let mut carry = 0u128;
             for (j, b) in n.0.into_iter().enumerate() {
-                let m = prod[i + j] as DoubleDigit + a as DoubleDigit * b as DoubleDigit + carry;
-                // The upper Digit::BITS are the carry part.
-                carry = (m & ((Digit::MAX as DoubleDigit) << Digit::BITS)) >> Digit::BITS;
-                // The lower Digit::BITS are the digit to store at i + j.
-                prod[i + j] = Digit::try_from(m & Digit::MAX as DoubleDigit).unwrap();
+                let m = prod[i + j] as u128 + a as u128 * b as u128 + carry;
+                // The upper u64::BITS are the carry part.
+                carry = (m & ((u64::MAX as u128) << u64::BITS)) >> u64::BITS;
+                // The lower u64::BITS are the digit to store at i + j.
+                prod[i + j] = u64::try_from(m & u64::MAX as u128).unwrap();
             }
             // The final carry becomes the next digit over.
-            prod[i + DIGITS] = Digit::try_from(carry).unwrap();
+            prod[i + Self::WIDTH] = u64::try_from(carry).unwrap();
         }
         Self(reduce(prod, p.0))
     }
@@ -205,15 +199,15 @@ impl Num {
     #[docext]
     #[must_use]
     pub fn inv(&self, p: Self) -> Option<Self> {
-        if *self == Self::ZERO {
+        if *self == ZERO {
             return None;
         }
 
         let mut u = reduce(self.0, p.0);
         let mut v = p.0;
-        let mut x1 = Self::ONE;
-        let mut x2 = Self::ZERO;
-        while u != ZERO {
+        let mut x1 = ONE;
+        let mut x2 = ZERO;
+        while u != ZERO.0 {
             let (q, r) = div(v, u);
             v = u;
             u = r.0;
@@ -251,14 +245,6 @@ impl cmp::Ord for Num {
     }
 }
 
-impl ops::Mul<Point> for Num {
-    type Output = Point;
-
-    fn mul(self, rhs: Point) -> Self::Output {
-        rhs.scale(self)
-    }
-}
-
 /// Flag to indicate if a subtraction resulted in a borrow.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct Borrow(bool);
@@ -269,11 +255,11 @@ struct Carry(bool);
 
 /// The remainder left after a division.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-struct Rem<const N: usize>([Digit; N]);
+struct Rem<const N: usize>([u64; N]);
 
 /// Subtract two numbers.
 #[must_use]
-fn sub<const N: usize>(a: [Digit; N], b: [Digit; N]) -> ([Digit; N], Borrow) {
+fn sub<const N: usize>(a: [u64; N], b: [u64; N]) -> ([u64; N], Borrow) {
     // The easiest way to understand this code is to do subtractions on paper and
     // watch how digits are borrowed from. Some examples to go through might be:
     // 591 - 202, where the middle digit is borrowed from;
@@ -281,10 +267,10 @@ fn sub<const N: usize>(a: [Digit; N], b: [Digit; N]) -> ([Digit; N], Borrow) {
     // 201 - 292, where the first two digits are borrowed from and the result
     // includes a borrow bit.
     // The only difference is that in this implementation digits range from 0 to
-    // Digit::MAX, whereas on paper they range from 0 to 9, and they are stored in
+    // u64::MAX, whereas on paper they range from 0 to 9, and they are stored in
     // LSB-first order, whereas on paper they are MSB-first.
     let mut borrow = false;
-    let mut result = [Digit::default(); N];
+    let mut result = [0; N];
     for ((a, b), r) in a.iter().zip(&b).zip(result.iter_mut()) {
         let (sub, overflow) = a.overflowing_sub(*b);
         *r = sub;
@@ -300,7 +286,7 @@ fn sub<const N: usize>(a: [Digit; N], b: [Digit; N]) -> ([Digit; N], Borrow) {
             borrow = true;
         } else {
             // There was no overflow. Subtract the borrow bit.
-            let (sub, overflow) = r.overflowing_sub(borrow as Digit);
+            let (sub, overflow) = r.overflowing_sub(borrow as u64);
             *r = sub;
             if overflow {
                 // If subtracting the borrow bit overflowed, then the next
@@ -318,10 +304,10 @@ fn sub<const N: usize>(a: [Digit; N], b: [Digit; N]) -> ([Digit; N], Borrow) {
 
 /// Add two numbers.
 #[must_use]
-fn add<const N: usize>(a: [Digit; N], b: [Digit; N]) -> ([Digit; N], Carry) {
+fn add<const N: usize>(a: [u64; N], b: [u64; N]) -> ([u64; N], Carry) {
     // Same as addition on paper.
     let mut carry = false;
-    let mut result = [Digit::default(); N];
+    let mut result = [0; N];
     for ((a, b), r) in a.iter().zip(&b).zip(result.iter_mut()) {
         let (add, overflow) = a.overflowing_add(*b);
         *r = add;
@@ -344,7 +330,7 @@ fn add<const N: usize>(a: [Digit; N], b: [Digit; N]) -> ([Digit; N], Carry) {
 
 /// Divide two numbers.
 #[must_use]
-fn div<const N: usize>(n: [Digit; N], d: [Digit; N]) -> ([Digit; N], Rem<N>) {
+fn div<const N: usize>(n: [u64; N], d: [u64; N]) -> ([u64; N], Rem<N>) {
     // This is an implementation of long division. It's the same as long division
     // done on paper, except it's done in base 2 instead of base 10. The easiest
     // way to understand the algorithm is to do an example on paper in base ten,
@@ -358,9 +344,9 @@ fn div<const N: usize>(n: [Digit; N], d: [Digit; N]) -> ([Digit; N], Rem<N>) {
     // the count to the result as a single digit. Note that the count may be zero.
     // The algorithm finishes when there are no more digits in the dividend,
     // resulting in a quotient and a remainder.
-    let mut q = [Digit::default(); N];
-    let mut r = [Digit::default(); N];
-    for i in (0..N * Digit::BITS as usize).rev() {
+    let mut q = [0; N];
+    let mut r = [0; N];
+    for i in (0..N * u64::BITS as usize).rev() {
         r = shl(r);
         if get_bit(n, i) {
             r = set_bit(r, 0);
@@ -385,7 +371,7 @@ fn div<const N: usize>(n: [Digit; N], d: [Digit; N]) -> ([Digit; N], Rem<N>) {
 
 /// Reduce a number modulo another number.
 #[must_use]
-fn reduce<const N: usize, const P: usize>(n: [Digit; N], p: [Digit; P]) -> [Digit; P] {
+fn reduce<const N: usize, const P: usize>(n: [u64; N], p: [u64; P]) -> [u64; P] {
     assert!(N >= P);
     let (_div, rem) = div(n, resize(p));
     resize(rem.0)
@@ -393,8 +379,8 @@ fn reduce<const N: usize, const P: usize>(n: [Digit; N], p: [Digit; P]) -> [Digi
 
 /// Shift all of the bits left by one.
 #[must_use]
-fn shl<const N: usize>(n: [Digit; N]) -> [Digit; N] {
-    let mut res = [Digit::default(); N];
+fn shl<const N: usize>(n: [u64; N]) -> [u64; N] {
+    let mut res = [0; N];
     let mut msb = false;
     for (i, digit) in n.into_iter().enumerate() {
         res[i] = digit.wrapping_shl(1);
@@ -403,7 +389,7 @@ fn shl<const N: usize>(n: [Digit; N]) -> [Digit; N] {
         if msb {
             res[i] |= 1;
         }
-        msb = digit & (1 << (Digit::BITS - 1)) != 0;
+        msb = digit & (1 << (u64::BITS - 1)) != 0;
     }
     res
 }
@@ -411,26 +397,34 @@ fn shl<const N: usize>(n: [Digit; N]) -> [Digit; N] {
 /// Get the bit at the given index. The rightmost (least significant) bit is at
 /// index 0.
 #[must_use]
-fn get_bit<const N: usize>(n: [Digit; N], i: usize) -> bool {
-    let digit = i / Digit::BITS as usize;
-    let i = i % Digit::BITS as usize;
+fn get_bit<const N: usize>(n: [u64; N], i: usize) -> bool {
+    let digit = i / u64::BITS as usize;
+    let i = i % u64::BITS as usize;
     n[digit] & (1 << i) != 0
 }
 
 /// Set the bit at the given index. Note that the rightmost bit is at index
 /// 0, the leftmost at index 255.
 #[must_use]
-fn set_bit<const N: usize>(mut n: [Digit; N], i: usize) -> [Digit; N] {
-    let digit = i / Digit::BITS as usize;
-    let i = i % Digit::BITS as usize;
+fn set_bit<const N: usize>(mut n: [u64; N], i: usize) -> [u64; N] {
+    let digit = i / u64::BITS as usize;
+    let i = i % u64::BITS as usize;
     n[digit] |= 1 << i;
     n
 }
 
 /// Resize a number into a different width by either appending zeros to the more
 /// significant bytes, or by dropping the most significant bytes.
-fn resize<const N: usize, const R: usize>(num: [Digit; N]) -> [Digit; R] {
-    let mut result = [Digit::default(); R];
+fn resize<const N: usize, const R: usize>(num: [u64; N]) -> [u64; R] {
+    let mut result = [0; R];
     result.iter_mut().zip(num.iter()).for_each(|(a, b)| *a = *b);
     result
+}
+
+impl<C: Curve> ops::Mul<Point<C>> for Num {
+    type Output = Point<C>;
+
+    fn mul(self, rhs: Point<C>) -> Self::Output {
+        rhs.scale(self)
+    }
 }

@@ -1,8 +1,8 @@
 use std::fmt;
 
-pub mod secp256k1;
+pub mod ecc;
 
-pub use secp256k1::Secp256k1Ecdsa;
+pub use ecc::{ecdsa, Ecdsa, Secp256k1};
 
 pub trait SignatureScheme {
     type PublicKey;
@@ -28,3 +28,14 @@ impl fmt::Display for InvalidSignature {
 }
 
 impl std::error::Error for InvalidSignature {}
+
+#[derive(Debug, Clone, Copy)]
+pub struct InvalidPrivateKey;
+
+impl fmt::Display for InvalidPrivateKey {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "invalid private key")
+    }
+}
+
+impl std::error::Error for InvalidPrivateKey {}
