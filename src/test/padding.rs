@@ -5,7 +5,7 @@
 //! for any random data.
 
 use {
-    crate::{Padding, Pkcs7, Plaintext},
+    crate::{Padding, Pkcs7},
     rand::Rng,
 };
 
@@ -28,15 +28,15 @@ where
 {
     let data: Vec<u8> = (0..data_len).map(|_| rand::thread_rng().gen()).collect();
 
-    let padded = pad.pad(Plaintext(data.clone()), n);
+    let padded = pad.pad(data.clone(), n);
     assert!(
-        padded.0.len() % n == 0,
+        padded.len() % n == 0,
         "padding does not align to block size\ndata: {data:?}\npadded: {padded:?}\nblock size: {n}",
     );
 
     let unpadded = pad.unpad(padded.clone(), n).unwrap();
     assert_eq!(
-        unpadded.0, data,
+        unpadded, data,
         "unpadded data does not match original\ndata: {data:?}\npadded: {padded:?}\nunpadded: \
          {unpadded:?}"
     );

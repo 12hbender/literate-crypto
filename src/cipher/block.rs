@@ -1,5 +1,3 @@
-use crate::{Ciphertext, Key, Plaintext};
-
 pub mod aes;
 mod modes;
 mod padding;
@@ -35,9 +33,9 @@ pub trait BlockEncrypt {
     /// Encrypt the plaintext.
     fn encrypt(
         &self,
-        data: Plaintext<Self::EncryptionBlock>,
-        key: Key<Self::EncryptionKey>,
-    ) -> Ciphertext<Self::EncryptionBlock>;
+        data: Self::EncryptionBlock,
+        key: Self::EncryptionKey,
+    ) -> Self::EncryptionBlock;
 }
 
 /// The decryption half of a [block cipher](BlockCipher).
@@ -48,7 +46,7 @@ pub trait BlockDecrypt {
     /// Decrypt the ciphertext.
     fn decrypt(
         &self,
-        data: Ciphertext<Self::DecryptionBlock>,
-        key: Key<Self::DecryptionKey>,
-    ) -> Plaintext<Self::DecryptionBlock>;
+        data: Self::DecryptionBlock,
+        key: Self::DecryptionKey,
+    ) -> Self::DecryptionBlock;
 }

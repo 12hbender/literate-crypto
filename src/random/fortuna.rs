@@ -8,8 +8,6 @@ use {
         Ctr,
         Entropy,
         Hash,
-        Key,
-        Plaintext,
         Preimage,
         Sha256,
     },
@@ -92,10 +90,7 @@ where
             key = self.hash.hash(Preimage(&key_and_seed)).0;
 
             // Generate RESEED_SIZE pseudorandom bytes via the block cipher.
-            self.ctr
-                .encrypt(Plaintext(vec![0; RESEED_SIZE]), Key(key.clone()))
-                .unwrap()
-                .0
+            self.ctr.encrypt(vec![0; RESEED_SIZE], key.clone()).unwrap()
         })
         .flatten()
     }

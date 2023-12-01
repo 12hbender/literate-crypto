@@ -7,10 +7,7 @@ use {
         Cipher,
         CipherDecrypt,
         CipherEncrypt,
-        Ciphertext,
-        Key,
         Padding,
-        Plaintext,
     },
     docext::docext,
     std::{convert::Infallible, fmt, mem::size_of},
@@ -95,25 +92,25 @@ where
 
     fn encrypt(
         &self,
-        data: Plaintext<Vec<u8>>,
-        key: Key<Self::EncryptionKey>,
-    ) -> Result<Ciphertext<Vec<u8>>, Self::EncryptionErr> {
+        data: Vec<u8>,
+        key: Self::EncryptionKey,
+    ) -> Result<Vec<u8>, Self::EncryptionErr> {
         let block_size = size_of::<Enc::EncryptionBlock>();
-        let mut prev = Ciphertext(self.iv.clone());
+        let mut prev = self.iv.clone();
         let mut data = self.pad.pad(data, block_size);
         // Encrypt the blocks in-place, using the input vector.
-        for chunk in data.0.chunks_mut(block_size) {
+        for chunk in data.chunks_mut(block_size) {
             let mut block: Enc::EncryptionBlock = chunk.try_into().unwrap();
             block
                 .as_mut()
                 .iter_mut()
-                .zip(prev.0.into_iter())
+                .zip(prev.into_iter())
                 .for_each(|(a, b)| *a ^= b);
-            let ciphertext = self.cip.encrypt(Plaintext(block), key.clone());
-            chunk.copy_from_slice(ciphertext.0.as_ref());
+            let ciphertext = self.cip.encrypt(block, key.clone());
+            chunk.copy_from_slice(ciphertext.as_ref());
             prev = ciphertext;
         }
-        Ok(Ciphertext(data.0))
+        Ok(data)
     }
 }
 
@@ -131,24 +128,23 @@ where
 
     fn decrypt(
         &self,
-        mut data: Ciphertext<Vec<u8>>,
-        key: Key<Self::DecryptionKey>,
-    ) -> Result<Plaintext<Vec<u8>>, Self::DecryptionErr> {
+        mut data: Vec<u8>,
+        key: Self::DecryptionKey,
+    ) -> Result<Vec<u8>, Self::DecryptionErr> {
         let block_size = size_of::<Dec::DecryptionBlock>();
-        let mut prev = Ciphertext(self.iv.clone());
+        let mut prev = self.iv.clone();
         // Decrypt the blocks in-place, using the input vector.
-        for chunk in data.0.chunks_mut(block_size) {
-            let block = Ciphertext(chunk.try_into().unwrap());
+        for chunk in data.chunks_mut(block_size) {
+            let block: Dec::DecryptionBlock = chunk.try_into().unwrap();
             let mut plaintext = self.cip.decrypt(block.clone(), key.clone());
             plaintext
-                .0
                 .as_mut()
                 .iter_mut()
-                .zip(prev.0.into_iter())
+                .zip(prev.into_iter())
                 .for_each(|(a, b): (&mut u8, _)| *a ^= b);
-            chunk.copy_from_slice(plaintext.0.as_ref());
+            chunk.copy_from_slice(plaintext.as_ref());
             prev = block;
         }
-        self.pad.unpad(Plaintext(data.0), block_size)
+        self.pad.unpad(data, block_size)
     }
 }

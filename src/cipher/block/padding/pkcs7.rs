@@ -1,8 +1,4 @@
-use {
-    crate::{Padding, Plaintext},
-    docext::docext,
-    std::fmt,
-};
+use {crate::Padding, docext::docext, std::fmt};
 
 // TODO Include some examples for what this would look like?
 /// PKCS #7, a simple approach to padding.
@@ -21,32 +17,27 @@ pub struct Pkcs7(());
 impl Padding for Pkcs7 {
     type Err = InvalidPadding;
 
-    fn pad(&self, mut data: Plaintext<Vec<u8>>, n: usize) -> Plaintext<Vec<u8>> {
+    fn pad(&self, mut data: Vec<u8>, n: usize) -> Vec<u8> {
         if n >= 256 {
             panic!("Pkcs7 does not work for block sizes >= 256");
         }
 
         // Calculate the amount of padding needed.
-        let m = n - data.0.len() % n;
+        let m = n - data.len() % n;
         // If the data is already a multiple of the block size, an entire block of
         // padding is needed.
         let m = if m == 0 { n } else { m };
         // Add the padding.
-        data.0.resize(data.0.len() + m, m.try_into().unwrap());
+        data.resize(data.len() + m, m.try_into().unwrap());
         data
     }
 
-    fn unpad(
-        &self,
-        mut data: Plaintext<Vec<u8>>,
-        n: usize,
-    ) -> Result<Plaintext<Vec<u8>>, Self::Err> {
+    fn unpad(&self, mut data: Vec<u8>, n: usize) -> Result<Vec<u8>, Self::Err> {
         if n >= 256 {
             panic!("Pkcs7 does not work for block sizes >= 256");
         }
 
         let m: usize = data
-            .0
             .last()
             .ok_or(InvalidPadding)?
             .to_owned()
@@ -55,11 +46,11 @@ impl Padding for Pkcs7 {
         if m == 0 || m > n {
             return Err(InvalidPadding);
         }
-        let padding = &data.0[data.0.len() - m..];
+        let padding = &data[data.len() - m..];
         if !padding.iter().all(|&b| usize::try_from(b).unwrap() == m) {
             return Err(InvalidPadding);
         }
-        data.0.truncate(data.0.len() - m);
+        data.truncate(data.len() - m);
         Ok(data)
     }
 }

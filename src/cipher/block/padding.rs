@@ -2,8 +2,6 @@ mod pkcs7;
 
 pub use pkcs7::Pkcs7;
 
-use crate::Plaintext;
-
 // TODO I've realized that my approach of doing things "in-place" only saves a
 // single heap allocation. This is not worth it. Instead, pad should split into
 // blocks I think, and Encrypt/Decrypt can take references instead
@@ -35,9 +33,9 @@ pub trait Padding {
 
     /// Pad the input data to a multiple of `n`. The length of the returned data
     /// must be a multiple of `n`.
-    fn pad(&self, data: Plaintext<Vec<u8>>, n: usize) -> Plaintext<Vec<u8>>;
+    fn pad(&self, data: Vec<u8>, n: usize) -> Vec<u8>;
 
     /// Remove the padding from the input data. Return an error if the padding
     /// is invalid.
-    fn unpad(&self, data: Plaintext<Vec<u8>>, n: usize) -> Result<Plaintext<Vec<u8>>, Self::Err>;
+    fn unpad(&self, data: Vec<u8>, n: usize) -> Result<Vec<u8>, Self::Err>;
 }

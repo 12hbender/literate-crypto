@@ -7,10 +7,7 @@ use {
         Cipher,
         CipherDecrypt,
         CipherEncrypt,
-        Ciphertext,
-        Key,
         Padding,
-        Plaintext,
     },
     std::{convert::Infallible, fmt},
 };
@@ -66,17 +63,17 @@ where
 
     fn encrypt(
         &self,
-        data: Plaintext<Vec<u8>>,
-        key: Key<Self::EncryptionKey>,
-    ) -> Result<Ciphertext<Vec<u8>>, Self::EncryptionErr> {
+        data: Vec<u8>,
+        key: Self::EncryptionKey,
+    ) -> Result<Vec<u8>, Self::EncryptionErr> {
         // Encrypt the blocks in-place, using the input vector.
         let block_size = std::mem::size_of::<Enc::EncryptionBlock>();
         let mut data = self.pad.pad(data, block_size);
-        for chunk in data.0.chunks_mut(block_size) {
-            let block = Plaintext(chunk.try_into().unwrap());
-            chunk.copy_from_slice(self.cip.encrypt(block, key.clone()).0.as_ref());
+        for chunk in data.chunks_mut(block_size) {
+            let block = chunk.try_into().unwrap();
+            chunk.copy_from_slice(self.cip.encrypt(block, key.clone()).as_ref());
         }
-        Ok(Ciphertext(data.0))
+        Ok(data)
     }
 }
 
@@ -90,15 +87,15 @@ where
 
     fn decrypt(
         &self,
-        mut data: Ciphertext<Vec<u8>>,
-        key: Key<Self::DecryptionKey>,
-    ) -> Result<Plaintext<Vec<u8>>, Self::DecryptionErr> {
+        mut data: Vec<u8>,
+        key: Self::DecryptionKey,
+    ) -> Result<Vec<u8>, Self::DecryptionErr> {
         // Decrypt the blocks in-place, using the input vector.
         let block_size = std::mem::size_of::<Dec::DecryptionBlock>();
-        for chunk in data.0.chunks_mut(block_size) {
-            let block = Ciphertext(chunk.try_into().unwrap());
-            chunk.copy_from_slice(self.cip.decrypt(block, key.clone()).0.as_ref());
+        for chunk in data.chunks_mut(block_size) {
+            let block = chunk.try_into().unwrap();
+            chunk.copy_from_slice(self.cip.decrypt(block, key.clone()).as_ref());
         }
-        self.pad.unpad(Plaintext(data.0), block_size)
+        self.pad.unpad(data, block_size)
     }
 }

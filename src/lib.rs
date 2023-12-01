@@ -16,7 +16,6 @@ mod cipher;
 mod hash;
 mod pubkey;
 mod random;
-mod text;
 mod util;
 
 pub use {
@@ -36,7 +35,6 @@ pub use {
         CipherEncrypt,
         Ctr,
         Ecb,
-        Key,
         OneTimePad,
         Padding,
         Pkcs7,
@@ -62,5 +60,4 @@ pub use {
     },
     pubkey::{ecc, ecdsa, Ecdsa, InvalidPrivateKey, InvalidSignature, Secp256k1, SignatureScheme},
     random::{Csprng, Entropy, Fortuna},
-    text::{Ciphertext, Plaintext},
 };

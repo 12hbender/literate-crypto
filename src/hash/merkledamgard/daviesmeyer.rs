@@ -1,5 +1,5 @@
 use {
-    crate::{BlockEncrypt, CompressionFn, Key, Plaintext},
+    crate::{BlockEncrypt, CompressionFn},
     docext::docext,
 };
 
@@ -57,9 +57,7 @@ where
     type State = Enc::EncryptionBlock;
 
     fn compress(&self, state: Self::State, block: Self::Block) -> Self::State {
-        self.step.step(
-            state.clone(),
-            self.enc.encrypt(Plaintext(state), Key(block)).0,
-        )
+        self.step
+            .step(state.clone(), self.enc.encrypt(state, block))
     }
 }

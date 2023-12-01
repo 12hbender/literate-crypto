@@ -21,7 +21,7 @@
 //! [`decrypt`] methods.
 
 use {
-    crate::{BlockCipher, BlockDecrypt, BlockEncrypt, Ciphertext, Key, Plaintext},
+    crate::{BlockCipher, BlockDecrypt, BlockEncrypt},
     docext::docext,
 };
 
@@ -106,9 +106,9 @@ impl BlockEncrypt for Aes128 {
 
     fn encrypt(
         &self,
-        data: Plaintext<Self::EncryptionBlock>,
-        key: Key<Self::EncryptionKey>,
-    ) -> Ciphertext<Self::EncryptionBlock> {
+        data: Self::EncryptionBlock,
+        key: Self::EncryptionKey,
+    ) -> Self::EncryptionBlock {
         encrypt::<AES128_NK, AES128_NR, AES128_BLOCK_BYTES, AES128_KEY_BYTES, AES128_EXPANSION_BYTES>(
             data, key,
         )
@@ -121,9 +121,9 @@ impl BlockDecrypt for Aes128 {
 
     fn decrypt(
         &self,
-        data: Ciphertext<Self::DecryptionBlock>,
-        key: Key<Self::DecryptionKey>,
-    ) -> Plaintext<Self::DecryptionBlock> {
+        data: Self::DecryptionBlock,
+        key: Self::DecryptionKey,
+    ) -> Self::DecryptionBlock {
         decrypt::<AES128_NK, AES128_NR, AES128_BLOCK_BYTES, AES128_KEY_BYTES, AES128_EXPANSION_BYTES>(
             data, key,
         )
@@ -145,9 +145,9 @@ impl BlockEncrypt for Aes192 {
 
     fn encrypt(
         &self,
-        data: Plaintext<Self::EncryptionBlock>,
-        key: Key<Self::EncryptionKey>,
-    ) -> Ciphertext<Self::EncryptionBlock> {
+        data: Self::EncryptionBlock,
+        key: Self::EncryptionKey,
+    ) -> Self::EncryptionBlock {
         encrypt::<AES192_NK, AES192_NR, AES192_BLOCK_BYTES, AES192_KEY_BYTES, AES192_EXPANSION_BYTES>(
             data, key,
         )
@@ -160,9 +160,9 @@ impl BlockDecrypt for Aes192 {
 
     fn decrypt(
         &self,
-        data: Ciphertext<Self::DecryptionBlock>,
-        key: Key<Self::DecryptionKey>,
-    ) -> Plaintext<Self::DecryptionBlock> {
+        data: Self::DecryptionBlock,
+        key: Self::DecryptionKey,
+    ) -> Self::DecryptionBlock {
         decrypt::<AES192_NK, AES192_NR, AES192_BLOCK_BYTES, AES192_KEY_BYTES, AES192_EXPANSION_BYTES>(
             data, key,
         )
@@ -184,9 +184,9 @@ impl BlockEncrypt for Aes256 {
 
     fn encrypt(
         &self,
-        data: Plaintext<Self::EncryptionBlock>,
-        key: Key<Self::EncryptionKey>,
-    ) -> Ciphertext<Self::EncryptionBlock> {
+        data: Self::EncryptionBlock,
+        key: Self::EncryptionKey,
+    ) -> Self::EncryptionBlock {
         encrypt::<AES256_NK, AES256_NR, AES256_BLOCK_BYTES, AES256_KEY_BYTES, AES256_EXPANSION_BYTES>(
             data, key,
         )
@@ -199,9 +199,9 @@ impl BlockDecrypt for Aes256 {
 
     fn decrypt(
         &self,
-        data: Ciphertext<Self::DecryptionBlock>,
-        key: Key<Self::DecryptionKey>,
-    ) -> Plaintext<Self::DecryptionBlock> {
+        data: Self::DecryptionBlock,
+        key: Self::DecryptionKey,
+    ) -> Self::DecryptionBlock {
         decrypt::<AES256_NK, AES256_NR, AES256_BLOCK_BYTES, AES256_KEY_BYTES, AES256_EXPANSION_BYTES>(
             data, key,
         )
@@ -231,10 +231,10 @@ pub fn encrypt<
     const KEY_BYTES: usize,       // NK * WORD_SIZE.
     const EXPANSION_BYTES: usize, // NB * (NR + 1) * WORD_SIZE.
 >(
-    data: Plaintext<[u8; BLOCK_BYTES]>,
-    key: Key<[u8; KEY_BYTES]>,
-) -> Ciphertext<[u8; BLOCK_BYTES]> {
-    let mut state = data.0;
+    data: [u8; BLOCK_BYTES],
+    key: [u8; KEY_BYTES],
+) -> [u8; BLOCK_BYTES] {
+    let mut state = data;
     let w = key_expansion::<NK, NR, KEY_BYTES, EXPANSION_BYTES>(key);
     add_round_key(&mut state, &w, 0);
 
@@ -249,7 +249,7 @@ pub fn encrypt<
     shift_rows(&mut state);
     add_round_key(&mut state, &w, NR);
 
-    Ciphertext(state)
+    state
 }
 
 /// AES decryption routine defined in Section 5.3 of the AES specification.
@@ -271,10 +271,10 @@ pub fn decrypt<
     const KEY_BYTES: usize,       // NK * WORD_SIZE.
     const EXPANSION_BYTES: usize, // NB * (NR + 1) * WORD_SIZE.
 >(
-    data: Ciphertext<[u8; BLOCK_BYTES]>,
-    key: Key<[u8; KEY_BYTES]>,
-) -> Plaintext<[u8; BLOCK_BYTES]> {
-    let mut state = data.0;
+    data: [u8; BLOCK_BYTES],
+    key: [u8; KEY_BYTES],
+) -> [u8; BLOCK_BYTES] {
+    let mut state = data;
     let w = key_expansion::<NK, NR, KEY_BYTES, EXPANSION_BYTES>(key);
     add_round_key(&mut state, &w, NR);
 
@@ -289,7 +289,7 @@ pub fn decrypt<
     inv_sub_bytes(&mut state);
     add_round_key(&mut state, &w, 0);
 
-    Plaintext(state)
+    state
 }
 
 /// The AddRoundKey transformation defined in Section 5.1.4 of the AES
@@ -603,10 +603,10 @@ pub fn key_expansion<
     const KEY_BYTES: usize,       // NK * WORD_SIZE
     const EXPANSION_BYTES: usize, // NB * (NR + 1) * WORD_SIZE
 >(
-    key: Key<[u8; KEY_BYTES]>,
+    key: [u8; KEY_BYTES],
 ) -> [u8; EXPANSION_BYTES] {
     let mut w = [0; EXPANSION_BYTES];
-    w[0..NK * WORD_SIZE].copy_from_slice(&key.0);
+    w[0..NK * WORD_SIZE].copy_from_slice(&key);
     for i in NK..NB * (NR + 1) {
         let mut temp = [0; WORD_SIZE];
         temp.copy_from_slice(&w[(i - 1) * WORD_SIZE..i * WORD_SIZE]);

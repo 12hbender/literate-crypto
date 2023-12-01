@@ -1,16 +1,5 @@
 use {
-    crate::{
-        BlockCipher,
-        BlockDecrypt,
-        BlockEncrypt,
-        Cbc,
-        CipherDecrypt,
-        CipherEncrypt,
-        Ciphertext,
-        Key,
-        Padding,
-        Plaintext,
-    },
+    crate::{BlockCipher, BlockDecrypt, BlockEncrypt, Cbc, CipherDecrypt, CipherEncrypt, Padding},
     std::convert::Infallible,
 };
 
@@ -18,21 +7,21 @@ use {
 fn cbc() {
     let iv = [1, 2];
     let cip = Cbc::new(TestCipher, NoPadding, iv);
-    let data = Plaintext([1, 2, 3, 4, 5, 6].to_vec());
-    let key = Key([7, 8]);
+    let data = [1, 2, 3, 4, 5, 6].to_vec();
+    let key = [7, 8];
 
     let ciphertext = cip.encrypt(data.clone(), key).unwrap();
     #[allow(clippy::identity_op)]
-    let expected = Ciphertext([
+    let expected = [
         1 ^ 1 ^ 7,
         2 ^ 2 ^ 8,
         1 ^ 1 ^ 7 ^ 3 ^ 7,
         2 ^ 2 ^ 8 ^ 4 ^ 8,
         1 ^ 1 ^ 7 ^ 3 ^ 7 ^ 5 ^ 7,
         2 ^ 2 ^ 8 ^ 4 ^ 8 ^ 6 ^ 8,
-    ]);
+    ];
     assert_eq!(
-        ciphertext.0, expected.0,
+        ciphertext, expected,
         "invalid cbc encryption\nexpected: {expected:?}\nciphertext: {ciphertext:?}"
     );
 
@@ -52,10 +41,10 @@ impl BlockEncrypt for TestCipher {
 
     fn encrypt(
         &self,
-        data: Plaintext<Self::EncryptionBlock>,
-        key: Key<Self::EncryptionKey>,
-    ) -> Ciphertext<Self::EncryptionBlock> {
-        Ciphertext([data.0[0] ^ key.0[0], data.0[1] ^ key.0[1]])
+        data: Self::EncryptionBlock,
+        key: Self::EncryptionKey,
+    ) -> Self::EncryptionBlock {
+        [data[0] ^ key[0], data[1] ^ key[1]]
     }
 }
 
@@ -65,10 +54,10 @@ impl BlockDecrypt for TestCipher {
 
     fn decrypt(
         &self,
-        data: Ciphertext<Self::DecryptionBlock>,
-        key: Key<Self::DecryptionKey>,
-    ) -> Plaintext<Self::DecryptionBlock> {
-        Plaintext([data.0[0] ^ key.0[0], data.0[1] ^ key.0[1]])
+        data: Self::DecryptionBlock,
+        key: Self::DecryptionKey,
+    ) -> Self::DecryptionBlock {
+        [data[0] ^ key[0], data[1] ^ key[1]]
     }
 }
 
@@ -83,16 +72,16 @@ struct NoPadding;
 impl Padding for NoPadding {
     type Err = Infallible;
 
-    fn pad(&self, data: Plaintext<Vec<u8>>, n: usize) -> Plaintext<Vec<u8>> {
-        if data.0.len() % n != 0 {
+    fn pad(&self, data: Vec<u8>, n: usize) -> Vec<u8> {
+        if data.len() % n != 0 {
             panic!("invalid test setup: data length not a multiple of block size");
         }
 
         data
     }
 
-    fn unpad(&self, data: Plaintext<Vec<u8>>, n: usize) -> Result<Plaintext<Vec<u8>>, Self::Err> {
-        if data.0.len() % n != 0 {
+    fn unpad(&self, data: Vec<u8>, n: usize) -> Result<Vec<u8>, Self::Err> {
+        if data.len() % n != 0 {
             panic!("invalid test setup: data length not a multiple of block size");
         }
 

@@ -1,5 +1,5 @@
 use {
-    crate::{BlockMode, Cipher, CipherDecrypt, CipherEncrypt, Ciphertext, Key, Plaintext},
+    crate::{BlockMode, Cipher, CipherDecrypt, CipherEncrypt},
     docext::docext,
     std::{fmt, marker::PhantomData},
 };
@@ -41,10 +41,10 @@ impl<K: Iterator<Item = u8>> CipherEncrypt for OneTimePad<K> {
 
     fn encrypt(
         &self,
-        data: Plaintext<Vec<u8>>,
-        key: Key<Self::EncryptionKey>,
-    ) -> Result<Ciphertext<Vec<u8>>, Self::EncryptionErr> {
-        cipher(data.0, key.0).map(Ciphertext)
+        data: Vec<u8>,
+        key: Self::EncryptionKey,
+    ) -> Result<Vec<u8>, Self::EncryptionErr> {
+        cipher(data, key)
     }
 }
 
@@ -54,12 +54,12 @@ impl<K: Iterator<Item = u8>> CipherDecrypt for OneTimePad<K> {
 
     fn decrypt(
         &self,
-        data: Ciphertext<Vec<u8>>,
-        key: Key<Self::DecryptionKey>,
-    ) -> Result<Plaintext<Vec<u8>>, Self::DecryptionErr> {
+        data: Vec<u8>,
+        key: Self::DecryptionKey,
+    ) -> Result<Vec<u8>, Self::DecryptionErr> {
         // Because XOR is symmetric, the decryption process is equivalent to
         // encryption.
-        cipher(data.0, key.0).map(Plaintext)
+        cipher(data, key)
     }
 }
 

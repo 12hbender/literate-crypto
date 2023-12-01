@@ -11,15 +11,12 @@
 use {
     crate::{
         BlockEncrypt,
-        Ciphertext,
         DaviesMeyer,
         DaviesMeyerStep,
         Digest,
         Hash,
-        Key,
         MerkleDamgard,
         MerkleDamgardPad,
-        Plaintext,
         Preimage,
     },
     docext::docext,
@@ -274,11 +271,11 @@ impl BlockEncrypt for Shacal1 {
 
     fn encrypt(
         &self,
-        data: Plaintext<Self::EncryptionBlock>,
-        key: Key<Self::EncryptionKey>,
-    ) -> Ciphertext<Self::EncryptionBlock> {
-        let state = data.0;
-        let block = key.0;
+        data: Self::EncryptionBlock,
+        key: Self::EncryptionKey,
+    ) -> Self::EncryptionBlock {
+        let state = data;
+        let block = key;
 
         // Initialize the message schedule.
         let mut schedule = [0; 16];
@@ -313,7 +310,7 @@ impl BlockEncrypt for Shacal1 {
             schedule[15] = next;
         }
 
-        Ciphertext([a, b, c, d, e])
+        [a, b, c, d, e]
     }
 }
 
@@ -323,11 +320,11 @@ impl BlockEncrypt for Shacal2 {
 
     fn encrypt(
         &self,
-        data: Plaintext<Self::EncryptionBlock>,
-        key: Key<Self::EncryptionKey>,
-    ) -> Ciphertext<Self::EncryptionBlock> {
-        let state = data.0;
-        let block = key.0;
+        data: Self::EncryptionBlock,
+        key: Self::EncryptionKey,
+    ) -> Self::EncryptionBlock {
+        let state = data;
+        let block = key;
 
         // Initialize the message schedule.
         let mut schedule = [0; 16];
@@ -372,7 +369,7 @@ impl BlockEncrypt for Shacal2 {
             schedule[15] = next;
         }
 
-        Ciphertext([a, b, c, d, e, f, g, h])
+        [a, b, c, d, e, f, g, h]
     }
 }
 

@@ -1,10 +1,6 @@
-use {
-    crate::{Ciphertext, Plaintext},
-    docext::docext,
-};
+use docext::docext;
 
 mod block;
-mod key;
 mod onetimepad;
 
 pub use {
@@ -24,7 +20,6 @@ pub use {
         Padding,
         Pkcs7,
     },
-    key::Key,
     onetimepad::OneTimePad,
 };
 
@@ -58,9 +53,9 @@ pub trait CipherEncrypt {
     /// Encrypt the plaintext.
     fn encrypt(
         &self,
-        data: Plaintext<Vec<u8>>,
-        key: Key<Self::EncryptionKey>,
-    ) -> Result<Ciphertext<Vec<u8>>, Self::EncryptionErr>;
+        data: Vec<u8>,
+        key: Self::EncryptionKey,
+    ) -> Result<Vec<u8>, Self::EncryptionErr>;
 }
 
 /// The decryption half of a [cipher](Cipher).
@@ -72,7 +67,7 @@ pub trait CipherDecrypt {
     /// ciphertext was not created by this cipher.
     fn decrypt(
         &self,
-        data: Ciphertext<Vec<u8>>,
-        key: Key<Self::DecryptionKey>,
-    ) -> Result<Plaintext<Vec<u8>>, Self::DecryptionErr>;
+        data: Vec<u8>,
+        key: Self::DecryptionKey,
+    ) -> Result<Vec<u8>, Self::DecryptionErr>;
 }

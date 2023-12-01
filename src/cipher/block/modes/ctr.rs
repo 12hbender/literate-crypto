@@ -1,15 +1,5 @@
 use {
-    crate::{
-        BlockEncrypt,
-        BlockMode,
-        Cipher,
-        CipherDecrypt,
-        CipherEncrypt,
-        Ciphertext,
-        Key,
-        OneTimePad,
-        Plaintext,
-    },
+    crate::{BlockEncrypt, BlockMode, Cipher, CipherDecrypt, CipherEncrypt, OneTimePad},
     docext::docext,
     std::{convert::Infallible, fmt, iter, mem},
 };
@@ -90,9 +80,9 @@ where
 
     fn encrypt(
         &self,
-        data: Plaintext<Vec<u8>>,
-        key: Key<Self::EncryptionKey>,
-    ) -> Result<Ciphertext<Vec<u8>>, Self::EncryptionErr> {
+        data: Vec<u8>,
+        key: Self::EncryptionKey,
+    ) -> Result<Vec<u8>, Self::EncryptionErr> {
         Ok(OneTimePad::default()
             .encrypt(data, keystream(&self.enc, key, self.nonce))
             .expect("infinite keystream"))
@@ -110,37 +100,31 @@ where
 
     fn decrypt(
         &self,
-        data: Ciphertext<Vec<u8>>,
-        key: Key<Self::DecryptionKey>,
-    ) -> Result<Plaintext<Vec<u8>>, Self::DecryptionErr> {
+        data: Vec<u8>,
+        key: Self::DecryptionKey,
+    ) -> Result<Vec<u8>, Self::DecryptionErr> {
         Ok(OneTimePad::default()
             .decrypt(data, keystream(&self.enc, key, self.nonce))
             .expect("infinite keystream"))
     }
 }
 
-fn keystream<Enc>(
-    enc: &Enc,
-    key: Key<Enc::EncryptionKey>,
-    nonce: u64,
-) -> Key<impl Iterator<Item = u8> + '_>
+fn keystream<Enc>(enc: &Enc, key: Enc::EncryptionKey, nonce: u64) -> impl Iterator<Item = u8> + '_
 where
     Enc: BlockEncrypt,
     Enc::EncryptionBlock: IntoIterator<Item = u8> + AsMut<[u8]> + Default,
     Enc::EncryptionKey: 'static + Clone,
 {
-    Key(
-        iter::successors(Some(nonce), |ctr| Some(ctr.wrapping_add(1))).flat_map(move |ctr| {
-            // Copy the counter bytes into a block and encrypt it.
-            let mut ctr_block = Enc::EncryptionBlock::default();
-            ctr_block
-                .as_mut()
-                .iter_mut()
-                .zip(ctr.to_le_bytes())
-                .for_each(|(b, n)| *b = n);
-            enc.encrypt(Plaintext(ctr_block), key.clone()).0.into_iter()
-        }),
-    )
+    iter::successors(Some(nonce), |ctr| Some(ctr.wrapping_add(1))).flat_map(move |ctr| {
+        // Copy the counter bytes into a block and encrypt it.
+        let mut ctr_block = Enc::EncryptionBlock::default();
+        ctr_block
+            .as_mut()
+            .iter_mut()
+            .zip(ctr.to_le_bytes())
+            .for_each(|(b, n)| *b = n);
+        enc.encrypt(ctr_block, key.clone()).into_iter()
+    })
 }
 
 #[derive(Debug)]
