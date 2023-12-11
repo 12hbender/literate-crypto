@@ -10,8 +10,8 @@ pub use {
     sha3::{Sha3_224, Sha3_256, Sha3_384, Sha3_512},
 };
 
-/// A cryptographic hash function maps a [preimage](Preimage) of arbitrary
-/// length into a fixed-size [hash digest](Digest).
+/// A cryptographic hash function maps a _preimage_ of arbitrary length into a
+/// fixed-size _hash digest_.
 ///
 /// To be cryptographically secure, this function must be one-way and collision
 /// resistant. One-way means that given a hash digest, there is no better way to

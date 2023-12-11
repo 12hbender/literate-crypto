@@ -9,11 +9,11 @@ pub use daviesmeyer::{DaviesMeyer, DaviesMeyerStep};
 ///
 /// The Merkle-Damgard construction builds a hash function from a [compression
 /// function](CompressionFn). Internally, the hash function maintains a state
-/// and splits the [preimage](crate::Preimage) into blocks with
-/// [padding](MerkleDamgardPad). Each block is fed into the compression function
-/// along with the current state, and the output of the compression function
-/// becomes the new state. The final state is the hash of the input. The initial
-/// state is a fixed value called the initialization vector (IV).
+/// and splits the preimage into blocks with [padding](MerkleDamgardPad). Each
+/// block is fed into the compression function along with the current state, and
+/// the output of the compression function becomes the new state. The final
+/// state is the hash of the input. The initial state is a fixed value called
+/// the initialization vector (IV).
 ///
 /// If the compression function is [secure](CompressionFn) and the padding
 /// scheme is secure [secure](MerkleDamgardPad), the Merkle-Damgard construction
@@ -79,7 +79,7 @@ pub struct MerkleDamgard<
 /// should be unpredictable and one-way, meaning it should be impossible to get
 /// to an old state given the current state. Ideally, it should also be
 /// impossible to get to an old state given the current state and the
-/// corresponding [preimage](crate::Preimage) block.
+/// corresponding preimage block.
 pub trait CompressionFn {
     type Block;
     type State;

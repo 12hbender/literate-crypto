@@ -4,7 +4,8 @@ use {
     std::{cmp, iter, mem, ops},
 };
 
-/// TODO This is little-endian, i.e. least significant byte first.
+/// Number used for modular arithmetic. Internally stored in little-endian
+/// format.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct Num([u64; Self::WIDTH]);
 
@@ -15,9 +16,11 @@ pub const THREE: Num = Num([3, 0, 0, 0]);
 pub const SEVEN: Num = Num([7, 0, 0, 0]);
 
 impl Num {
-    // TODO Change this to 8
+    /// The size of this number in 64-bit words.
     pub const WIDTH: usize = 4;
+    /// The size of this number in bits.
     pub const BITS: usize = Self::WIDTH * u64::BITS as usize;
+    /// The size of this number in bytes.
     pub const BYTES: usize = Self::BITS / 8;
 
     pub const fn from_le_words(n: [u64; Self::WIDTH]) -> Self {
@@ -43,7 +46,7 @@ impl Num {
         result
     }
 
-    /// Modular addition.
+    /// Modular addition with modulus `p`.
     #[must_use]
     pub fn add(&self, n: Self, p: Self) -> Self {
         let (n, carry) = add(self.0, n.0);
@@ -60,7 +63,7 @@ impl Num {
         }
     }
 
-    /// Modular subtraction.
+    /// Modular subtraction with modulus `p`.
     #[must_use]
     pub fn sub(self, n: Self, p: Self) -> Self {
         let (n, borrow) = sub(self.0, n.0);
@@ -79,7 +82,7 @@ impl Num {
         }
     }
 
-    /// Modular multiplication.
+    /// Modular multiplication with modulus `p`.
     #[must_use]
     pub fn mul(self, n: Self, p: Self) -> Self {
         // Same as multiplication on paper.
@@ -99,7 +102,7 @@ impl Num {
         Self(reduce(prod, p.0))
     }
 
-    /// Modular equality.
+    /// Modular equality with modulus `p`.
     pub fn eq(self, n: Self, p: Self) -> bool {
         reduce(self.0, p.0) == reduce(n.0, p.0)
     }
@@ -421,6 +424,21 @@ fn resize<const N: usize, const R: usize>(num: [u64; N]) -> [u64; R] {
     result
 }
 
+/// Multiply the point by a scalar.
+///
+/// This uses the _square-and-multiply_ method. For example, to calculate
+/// $x^{19}$, start with $y = x$ and multiply $y$ with itself, resulting in $y =
+/// y \cdot y = x^2$. Then, multiply $y$ with itself again, resulting in
+/// $y = y \cdot y = x^4$. Repeat this until it can no longer be done, at which
+/// point $y = x^{16}$ and there have been four multiplications thus far.
+/// Finally, multiply $y$ with $x$ three more times to get the desired result.
+///
+/// With this method, $x^{19}$ was calculated in only seven multiplications,
+/// compared to the naive algorithm which would execute 19 multiplications.
+///
+/// In the case of elliptic curve points, the "square" is equivalent to
+/// doubling, and "multiply" is equivalent to addition.
+#[docext]
 impl<C: Curve> ops::Mul<Point<C>> for Num {
     type Output = Point<C>;
 
