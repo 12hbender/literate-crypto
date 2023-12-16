@@ -1,10 +1,11 @@
 [package]
 name = "literate-crypto"
-version = "0.0.1"
+version = "0.0.2"
 authors = ["12hbender <12hbender@proton.me>"]
 edition = "2021"
 description = "Literate Cryptography by 12hbender"
 license = "Unlicense"
+homepage = "https://lib.rs/crates/literate-crypto"
 
 [dependencies]
 docext = "0.0.10"
