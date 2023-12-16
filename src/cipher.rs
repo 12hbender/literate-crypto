@@ -26,15 +26,16 @@ pub use {
 /// A cipher encrypts and decrypts data of arbitrary length using a symmetric
 /// key.
 ///
-/// The encrypted data is called [ciphertext](crate::Ciphertext), and the
-/// unencrypted data is called [plaintext](crate::Plaintext). Ciphertext should
-/// be statistically indistinguishable from random data.
+/// The encrypted data is called ciphertext, and the unencrypted data is called
+/// plaintext. Ciphertext should be statistically indistinguishable from random
+/// data.
 ///
 /// The following relation must hold between the encrypt and decrypt methods:
 /// $$
 /// decrypt(encrypt(p, k), k) = p \quad \forall p \in \mathbf{P}, k \in
 /// \mathbf{K}
 /// $$
+///
 /// where $\mathbf{P}$ is the set of all possible plaintexts (plaintext space)
 /// and $\mathbf{K}$ is the set of all possible keys (key space). Note that the
 /// key space usually has a fixed size, while the plaintext space is infinite.

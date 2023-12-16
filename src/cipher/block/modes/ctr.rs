@@ -4,8 +4,9 @@ use {
     std::{convert::Infallible, fmt, iter, mem},
 };
 
-/// Block counter [mode](crate::BlockMode) turns a block cipher into a stream
-/// cipher by counting blocks.
+/// Block counter [mode](crate::BlockMode) is a block chaining mode which turns
+/// a block cipher into a stream cipher, and hence does not require a [padding
+/// scheme](crate::Padding).
 ///
 /// The algorithm keeps a monotonically incrementing counter. The
 /// plaintext is split into blocks. Each block of plaintext is encrypted by

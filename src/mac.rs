@@ -7,9 +7,9 @@ pub use hmac::Hmac;
 ///
 /// A MAC algorithm takes a message and a key, and produces a fixed-size _tag_,
 /// which is essentially a hash specific to the given message and key. The tag
-/// can be used to prove, for example, that a (possibly encrypted) message was
-/// not modified in transit. It can also prove that the message corresponding to
-/// the given tag was signed with a specific pre-shared key.
+/// can be used to prove that a message was encrypted with the given pre-shared
+/// key. The tag should be checked before decrypting the message to make sure
+/// that it is authentic and hasn't been tampered.
 ///
 /// A message authentication code does not prevent man-in-the-middle attacks or
 /// replay attacks.

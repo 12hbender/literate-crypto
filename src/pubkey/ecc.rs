@@ -69,7 +69,12 @@ pub trait Curve: Sized {
     /// Order of the prime field this curve is constructed over.
     const P: modular::Num;
 
-    /// Order of the generator point.
+    /// Order of the [generator point](Curve::g).
+    ///
+    /// If the generator point keeps being added to itself, it will keep giving
+    /// unique points up until $N$ additions have been done, after which the
+    /// points will cyclically repeat.
+    #[docext]
     const N: modular::Num;
 
     /// The $a$ parameter for the elliptic curve equation $y^2 = x^3 + ax + b$.
@@ -84,8 +89,8 @@ pub trait Curve: Sized {
     ///
     /// During cryptographic operations, this point is used to generate all
     /// other points on the curve via point multiplication. This point
-    /// must generate a cyclic subgroup of the curve. The cardinality of the
-    /// subgroup should be as large as possible.
+    /// must generate a cyclic subgroup of the curve. The [cardinality of the
+    /// subgroup](Curve::N) should be as large as possible.
     fn g() -> Point<Self>;
 }
 

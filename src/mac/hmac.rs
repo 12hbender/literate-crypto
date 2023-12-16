@@ -22,9 +22,13 @@ const IPAD: u8 = 0x36;
 /// \big) \Big)
 /// $$
 ///
-/// where $m$ is the message, $H$ is the hash function, $opad$ is a sequence of
-/// $\mathrm{5C}_{16}$ bytes equal in size to the internal block of the hash
-/// function, and $ipad$ is a sequence of $\mathrm{36}_{16}$ bytes.
+/// where $m$ is the message, $H$ is the hash function, $opad$ (outer pading) is
+/// a sequence of $\mathrm{5C}_{16}$ bytes equal in size to the internal block
+/// of the hash function, and $ipad$ (inner padding) is a sequence of
+/// $\mathrm{36}_{16}$ bytes. Essentially, first an _inner hash_ is computed by
+/// hashing the message concatenated to the outer padded key. Then, an outer
+/// hash is computed by hashing the inner hash concatenated to the inner padded
+/// key. The outer hash is the resulting tag.
 ///
 /// This method was chosen as the standard because it's theoretically more
 /// secure than simply prepending or appending the key to the message, and is
@@ -52,7 +56,9 @@ where
         if key.len() <= BLOCK_SIZE {
             k[..key.len()].copy_from_slice(key);
         } else {
-            k[..DIGEST_SIZE].copy_from_slice(&self.0.hash(key));
+            let s = DIGEST_SIZE.min(BLOCK_SIZE);
+            let h = self.0.hash(key);
+            k[..s].copy_from_slice(&h[..s]);
         };
 
         // Compute the inner hash.

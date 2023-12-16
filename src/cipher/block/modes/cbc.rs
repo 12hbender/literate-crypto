@@ -13,8 +13,9 @@ use {
     std::{convert::Infallible, fmt, mem::size_of},
 };
 
-/// Cipher block chaining mode, the most common [mode of
-/// operation](crate::BlockMode) for block ciphers.
+/// Cipher block chaining mode is the most common [mode of
+/// operation](crate::BlockMode) for block ciphers which combines every block
+/// with all of the previous blocks of ciphertext.
 ///
 /// Given a block cipher $E_k$ with key $k$ and some plaintext $P = P_1
 /// \parallel P_2 \parallel \dots \parallel P_n$, where $P_i$ are the plaintext

@@ -16,14 +16,13 @@ use {
 ///
 /// This signature algorithm relies on the elliptic-curve digital logarithm
 /// problem (ECDLP): the assumption that given points $G$ and $Q$, where $Q =
-/// kG$, and $k$ is unknown, it's computationally unfeasible to calculate the
+/// kG$, and $k$ is unknown, it is computationally unfeasible to calculate the
 /// scalar $k$. There is some evidence which implies this assumption might be
 /// true, but it has not been proven. It has yet to be broken in practice.
 ///
 /// Given a message $m$, private key $p$, curve with [generator point
-/// $G$](crate::ecc::Curve::g) and [its order $n$](crate::ecc::Curve::N), and a
-/// [hash function $H$](crate::Hash), the algorithm to sign $m$ operates as
-/// follows:
+/// $G$](crate::ecc::Curve::g) of [order $n$](crate::ecc::Curve::N), and a [hash
+/// function $H$](crate::Hash), the algorithm to sign $m$ operates as follows:
 /// 1. Generate a random number $k \in [1, n-1]$ from the curve's prime field,
 ///    or derive it deterministically from $m$ and $p$.
 /// 2. Calculate $R = kG$, $r = R_x$, where $R_x$ is the x-coordinate of $R$. If

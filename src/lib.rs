@@ -1,3 +1,22 @@
+//! - [Cipher]
+//!     - [One Time Pad](OneTimePad)
+//!     - [Block Cipher](BlockCipher)
+//!         - [Padding]
+//!         - [Block Mode](BlockMode)
+//!             - [ECB](Ecb)
+//!             - [CBC](Cbc)
+//!             - [CTR](Ctr)
+//! - [Hashing](Hash)
+//!     - [SHA-2](sha2)
+//!     - [SHA-3](sha3)
+//! - [CSPRNG](Csprng)
+//!     - [Fortuna]
+//! - [MAC](Mac)
+//!     - [HMAC](Hmac)
+//! - [Signature Scheme (Public Key Cryptography)](SignatureScheme)
+//!     - [Elliptic Curve Math](ecc::Curve)
+//!         - [ECDSA](Ecdsa)
+
 #![feature(return_position_impl_trait_in_trait)]
 #![feature(array_chunks)]
 #![feature(associated_type_bounds)]
