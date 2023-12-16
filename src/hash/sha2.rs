@@ -27,10 +27,11 @@ pub const KT_256: [u32; 64] = [
     0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2,
 ];
 
-pub const BLOCK_BYTES: usize = 64;
+/// The block size in bytes.
+const BLOCK_SIZE: usize = 64;
 
 /// A preimage block.
-pub type Block = [u8; BLOCK_BYTES];
+pub type Block = [u8; BLOCK_SIZE];
 
 /// The internal state of [SHA-1](Sha1).
 pub type Sha1State = [u32; 5];
@@ -184,6 +185,7 @@ impl Default for Sha1 {
 
 impl Hash for Sha1 {
     type Digest = [u8; 20];
+    type Block = Block;
 
     fn hash(&self, preimage: &[u8]) -> Self::Digest {
         let mut result = [0; 20];
@@ -212,6 +214,7 @@ impl Default for Sha256 {
 
 impl Hash for Sha256 {
     type Digest = [u8; 32];
+    type Block = Block;
 
     fn hash(&self, preimage: &[u8]) -> Self::Digest {
         let mut result = [0; 32];
@@ -240,6 +243,7 @@ impl Default for Sha224 {
 
 impl Hash for Sha224 {
     type Digest = [u8; 28];
+    type Block = Block;
 
     fn hash(&self, preimage: &[u8]) -> Self::Digest {
         let mut result = [0; 28];
@@ -509,35 +513,35 @@ impl MerkleDamgardPad for LengthPadding {
 
     fn pad(&self, preimage: &[u8]) -> impl Iterator<Item = Self::Block> {
         preimage
-            .chunks(BLOCK_BYTES)
+            .chunks(BLOCK_SIZE)
             .chain(
                 // If the input is a multiple of the block size, a full block of padding needs to
                 // be added.
-                iter::once([].as_slice()).take(if preimage.len() % BLOCK_BYTES == 0 {
+                iter::once([].as_slice()).take(if preimage.len() % BLOCK_SIZE == 0 {
                     1
                 } else {
                     0
                 }),
             )
             .flat_map(|chunk| {
-                if chunk.len() == BLOCK_BYTES {
+                if chunk.len() == BLOCK_SIZE {
                     // This block does not need padding.
                     vec![chunk.try_into().unwrap()]
-                } else if BLOCK_BYTES - chunk.len() <= 8 {
+                } else if BLOCK_SIZE - chunk.len() <= 8 {
                     // This block requires an additional block of padding.
-                    let mut block = [0u8; BLOCK_BYTES];
+                    let mut block = [0u8; BLOCK_SIZE];
                     block[..chunk.len()].copy_from_slice(chunk);
                     block[chunk.len()] = 0x80;
-                    let mut next = [0u8; BLOCK_BYTES];
-                    next[BLOCK_BYTES - 8..]
+                    let mut next = [0u8; BLOCK_SIZE];
+                    next[BLOCK_SIZE - 8..]
                         .copy_from_slice(&u64::try_from(8 * preimage.len()).unwrap().to_be_bytes());
                     vec![block, next]
                 } else {
                     // This block needs to be padded.
-                    let mut block = [0u8; BLOCK_BYTES];
+                    let mut block = [0u8; BLOCK_SIZE];
                     block[..chunk.len()].copy_from_slice(chunk);
                     block[chunk.len()] = 0x80;
-                    block[BLOCK_BYTES - 8..]
+                    block[BLOCK_SIZE - 8..]
                         .copy_from_slice(&u64::try_from(8 * preimage.len()).unwrap().to_be_bytes());
                     vec![block]
                 }

@@ -126,6 +126,7 @@ impl<
     > Hash for MerkleDamgard<State, Block, F, Pad>
 {
     type Digest = State;
+    type Block = Block;
 
     fn hash(&self, preimage: &[u8]) -> Self::Digest {
         self.pad

@@ -32,6 +32,7 @@ pub struct Sha3_224(());
 
 impl Hash for Sha3_224 {
     type Digest = [u8; 28];
+    type Block = [u8; 144];
 
     fn hash(&self, preimage: &[u8]) -> Self::Digest {
         sponge::<144, 28>(preimage)
@@ -44,6 +45,7 @@ pub struct Sha3_256(());
 
 impl Hash for Sha3_256 {
     type Digest = [u8; 32];
+    type Block = [u8; 136];
 
     fn hash(&self, input: &[u8]) -> Self::Digest {
         sponge::<136, 32>(input)
@@ -56,6 +58,7 @@ pub struct Sha3_384(());
 
 impl Hash for Sha3_384 {
     type Digest = [u8; 48];
+    type Block = [u8; 104];
 
     fn hash(&self, input: &[u8]) -> Self::Digest {
         sponge::<104, 48>(input)
@@ -68,6 +71,7 @@ pub struct Sha3_512(());
 
 impl Hash for Sha3_512 {
     type Digest = [u8; 64];
+    type Block = [u8; 72];
 
     fn hash(&self, input: &[u8]) -> Self::Digest {
         sponge::<72, 64>(input)

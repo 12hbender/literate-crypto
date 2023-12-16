@@ -25,5 +25,12 @@ pub use {
 pub trait Hash {
     type Digest;
 
+    /// The block used internally by the hash function.
+    ///
+    /// All hash functions are implemented by internally operating on blocks in
+    /// various ways. This fact is used by the [HMAC](crate::Hmac)
+    /// construction.
+    type Block;
+
     fn hash(&self, preimage: &[u8]) -> Self::Digest;
 }

@@ -67,9 +67,9 @@ impl<C, H> Ecdsa<C, H> {
     }
 }
 
-impl<C, H, const HSIZE: usize> SignatureScheme for Ecdsa<C, H>
+impl<C, H, const DIGEST_SIZE: usize> SignatureScheme for Ecdsa<C, H>
 where
-    H: Hash<Digest = [u8; HSIZE]>,
+    H: Hash<Digest = [u8; DIGEST_SIZE]>,
     C: Curve,
 {
     type PublicKey = PublicKey<C>;
@@ -77,7 +77,7 @@ where
     type Signature = Signature<C>;
 
     fn sign(&self, key: Self::PrivateKey, msg: &[u8]) -> Self::Signature {
-        assert!(HSIZE >= C::SIZE);
+        assert!(DIGEST_SIZE >= C::SIZE);
         let e = self.hash.hash(msg);
         let e = modular::Num::from_le_bytes(resize(e));
         let mut preimage: Vec<u8> = Default::default();
@@ -112,7 +112,7 @@ where
         msg: &[u8],
         sig: &Self::Signature,
     ) -> Result<(), InvalidSignature> {
-        assert!(HSIZE >= C::SIZE);
+        assert!(DIGEST_SIZE >= C::SIZE);
         let e = modular::Num::from_le_bytes(resize(self.hash.hash(msg)));
         let i = sig.s.inv(C::N).unwrap();
         let u = e.mul(i, C::N);
@@ -174,7 +174,10 @@ impl<C: Curve> PublicKey<C> {
         Self(p)
     }
 
-    /// Derive the public key from a private key.
+    /// Derive the public key from a [private key](PrivateKey).
+    ///
+    /// This is done by simply multiplying the private key with the [generator
+    /// point](crate::ecc::Curve::g).
     pub fn derive(key: PrivateKey<C>) -> Self {
         Self(key.0 * C::g())
     }

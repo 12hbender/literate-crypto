@@ -31,9 +31,9 @@ checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
 name = "docext"
-version = "0.0.9"
+version = "0.0.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "508b4a338b21847249b21109fc96091ba6869afb2b8ca885ce250c62aea5673d"
+checksum = "412d8ed7cd3dea33ca1f764e0b9d21f6621c185268ca9ecb4b1387ed63e38e1a"
 dependencies = [
  "base64",
  "proc-macro2",

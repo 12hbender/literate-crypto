@@ -14,6 +14,7 @@ pub mod doc;
 
 mod cipher;
 mod hash;
+mod mac;
 mod pubkey;
 mod random;
 mod util;
@@ -56,6 +57,7 @@ pub use {
         Sha3_384,
         Sha3_512,
     },
+    mac::{Hmac, Mac},
     pubkey::{ecc, ecdsa, Ecdsa, InvalidPrivateKey, InvalidSignature, Secp256k1, SignatureScheme},
     random::{Csprng, Entropy, Fortuna},
 };
