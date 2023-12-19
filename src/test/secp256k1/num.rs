@@ -49,7 +49,7 @@
 //!    print("let cases = ", result, ";")
 //! ```
 
-use crate::ecc::{modular, Curve, Secp256k1};
+use crate::ecc::{Curve, Num, Secp256k1};
 
 /// Assert that adding two numbers returns the expected result.
 #[test]
@@ -258,9 +258,9 @@ fn addition() {
     ];
 
     for [a, b, c] in cases {
-        let a = modular::Num::from_le_words(a);
-        let b = modular::Num::from_le_words(b);
-        let c = modular::Num::from_le_words(c);
+        let a = Num::from_le_words(a);
+        let b = Num::from_le_words(b);
+        let c = Num::from_le_words(c);
         assert_eq!(a.add(b, Secp256k1::P), c);
     }
 }
@@ -472,9 +472,9 @@ fn subtraction() {
     ];
 
     for [a, b, c] in cases {
-        let a = modular::Num::from_le_words(a);
-        let b = modular::Num::from_le_words(b);
-        let c = modular::Num::from_le_words(c);
+        let a = Num::from_le_words(a);
+        let b = Num::from_le_words(b);
+        let c = Num::from_le_words(c);
         assert_eq!(a.sub(b, Secp256k1::P), c);
     }
 }
@@ -686,9 +686,9 @@ fn multiplication() {
     ];
 
     for [a, b, c] in cases {
-        let a = modular::Num::from_le_words(a);
-        let b = modular::Num::from_le_words(b);
-        let c = modular::Num::from_le_words(c);
+        let a = Num::from_le_words(a);
+        let b = Num::from_le_words(b);
+        let c = Num::from_le_words(c);
         assert_eq!(a.mul(b, Secp256k1::P), c);
     }
 }
@@ -760,33 +760,30 @@ fn inversion() {
     ];
 
     for n in cases {
-        let n = modular::Num::from_le_words(n);
-        assert_eq!(
-            n.mul(n.inv(Secp256k1::P).unwrap(), Secp256k1::P),
-            modular::ONE
-        );
+        let n = Num::from_le_words(n);
+        assert_eq!(n.mul(n.inv(Secp256k1::P).unwrap(), Secp256k1::P), Num::ONE);
     }
 }
 
 /// Assert that inverting zero returns `None`.
 #[test]
 fn inv_zero() {
-    assert_eq!(modular::ZERO.inv(Secp256k1::P), None);
+    assert_eq!(Num::ZERO.inv(Secp256k1::P), None);
 }
 
-/// Test that modular equality returns the expected result.
+/// Test that Num equality returns the expected result.
 #[test]
 fn equality() {
-    let n = modular::Num::from_le_words([
+    let n = Num::from_le_words([
         10952063692820712150,
         4107566514971989675,
         14334172746451041540,
         16336111428691836948,
     ]);
 
-    assert!(!n.eq(modular::ONE, modular::TWO));
-    assert!(n.eq(modular::ZERO, modular::TWO));
-    assert!(n.eq(modular::ONE, modular::THREE));
-    assert!(n.eq(modular::TWO, modular::SEVEN));
-    assert!(n.eq(modular::ZERO, n));
+    assert!(!n.eq(Num::ONE, Num::TWO));
+    assert!(n.eq(Num::ZERO, Num::TWO));
+    assert!(n.eq(Num::ONE, Num::THREE));
+    assert!(n.eq(Num::TWO, Num::SEVEN));
+    assert!(n.eq(Num::ZERO, n));
 }

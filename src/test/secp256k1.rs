@@ -1,3 +1,3 @@
 mod curve;
-mod modular;
+mod num;
 mod sign;

@@ -1,12 +1,13 @@
 use crate::{
-    ecc::{self, ecdsa, modular, Curve},
-    schnorr,
+    ecc::{self, Curve, Num},
     test::fortuna::NoEntropy,
     util::CollectVec,
     Aes256,
     Ecdsa,
+    EcdsaSignature,
     Fortuna,
     Schnorr,
+    SchnorrSignature,
     Secp256k1,
     Sha256,
     Sha3_256,
@@ -27,7 +28,7 @@ fn ecdsa() {
     assert!(ecdsa.verify(pubkey, &data, &sig).is_ok());
 
     // Invalidate the signature by adding random numbers to r and s.
-    let sig = ecdsa::Signature::new(
+    let sig = EcdsaSignature::new(
         sig.r().add(rand_num(), Secp256k1::N),
         sig.s().add(rand_num(), Secp256k1::N),
     )
@@ -54,7 +55,7 @@ fn schnorr() {
     assert!(schnorr.verify(pubkey, &data, &sig).is_ok());
 
     // Invalidate the signature by adding random numbers to r and s.
-    let sig = schnorr::Signature::new(
+    let sig = SchnorrSignature::new(
         sig.s().add(rand_num(), Secp256k1::N),
         sig.e().add(rand_num(), Secp256k1::N),
     )
@@ -71,8 +72,8 @@ fn rand_privkey() -> ecc::PrivateKey<Secp256k1> {
     }
 }
 
-fn rand_num() -> modular::Num {
-    modular::Num::from_le_words([
+fn rand_num() -> Num {
+    Num::from_le_words([
         rand::random(),
         rand::random(),
         rand::random(),

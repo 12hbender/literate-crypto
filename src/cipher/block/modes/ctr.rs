@@ -57,12 +57,12 @@ where
 {
 }
 
-impl<Enc: BlockEncrypt> Ctr<Enc> {
+impl<Enc, const BLOCK_SIZE: usize> Ctr<Enc>
+where
+    Enc: BlockEncrypt<EncryptionBlock = [u8; BLOCK_SIZE]>,
+{
     pub fn new(enc: Enc, nonce: u64) -> Result<Self, BlockSizeTooSmall> {
-        // Check that the counter bytes can be packed into the plaintext block.
-        // TODO Remove this with a proper BlockSize trait
-        let block_size = mem::size_of::<Enc::EncryptionBlock>();
-        if block_size < mem::size_of_val(&nonce) {
+        if BLOCK_SIZE < mem::size_of_val(&nonce) {
             Err(BlockSizeTooSmall)
         } else {
             Ok(Self { enc, nonce })

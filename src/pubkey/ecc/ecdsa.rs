@@ -1,7 +1,7 @@
 use {
     crate::{
         ecc::{Curve, PrivateKey, PublicKey},
-        pubkey::ecc::{modular, Coordinates},
+        pubkey::ecc::{Coordinates, Num},
         util,
         Hash,
         InvalidSignature,
@@ -73,20 +73,20 @@ where
 {
     type PublicKey = PublicKey<C>;
     type PrivateKey = PrivateKey<C>;
-    type Signature = Signature<C>;
+    type Signature = EcdsaSignature<C, H>;
 
     fn sign(&mut self, key: Self::PrivateKey, msg: &[u8]) -> Self::Signature {
         assert!(DIGEST_SIZE >= C::SIZE);
         let e = self.hash.hash(msg);
-        let e = modular::Num::from_le_bytes(util::resize(e));
+        let e = Num::from_le_bytes(util::resize(e));
         let mut preimage: Vec<u8> = Default::default();
         preimage.extend(msg);
         preimage.extend(key.0.to_le_bytes());
-        let mut k = modular::Num::from_le_bytes(util::resize(self.hash.hash(&preimage)));
+        let mut k = Num::from_le_bytes(util::resize(self.hash.hash(&preimage)));
         let mut r;
         let mut s;
         'retry: loop {
-            k = modular::Num::from_le_bytes(util::resize(self.hash.hash(&k.to_le_bytes())));
+            k = Num::from_le_bytes(util::resize(self.hash.hash(&k.to_le_bytes())));
             r = match (k * C::g()).coordinates() {
                 Coordinates::Infinity => continue 'retry,
                 Coordinates::Finite(x, _) => x,
@@ -94,13 +94,14 @@ where
             s = e.add(r.mul(key.0, C::N), C::N);
             // k * G is finite, so k must not be zero and thus has an inverse.
             s = k.inv(C::N).unwrap().mul(s, C::N);
-            if s == modular::ZERO {
+            if s == Num::ZERO {
                 continue 'retry;
             }
-            return Signature {
+            return EcdsaSignature {
                 r,
                 s,
                 _curve: Default::default(),
+                _hash: Default::default(),
             };
         }
     }
@@ -112,7 +113,7 @@ where
         sig: &Self::Signature,
     ) -> Result<(), InvalidSignature> {
         assert!(DIGEST_SIZE >= C::SIZE);
-        let e = modular::Num::from_le_bytes(util::resize(self.hash.hash(msg)));
+        let e = Num::from_le_bytes(util::resize(self.hash.hash(msg)));
         let i = sig.s.inv(C::N).unwrap();
         let u = e.mul(i, C::N);
         let v = sig.r.mul(i, C::N);
@@ -129,41 +130,42 @@ where
     }
 }
 
-// TODO Add H parameter here (like schnorr)
 #[derive(Debug)]
-pub struct Signature<C> {
-    r: modular::Num,
-    s: modular::Num,
+pub struct EcdsaSignature<C, H> {
+    r: Num,
+    s: Num,
     _curve: PhantomData<C>,
+    _hash: PhantomData<H>,
 }
 
-impl<C> Clone for Signature<C> {
+impl<C, H> Clone for EcdsaSignature<C, H> {
     fn clone(&self) -> Self {
         *self
     }
 }
 
-impl<C> Copy for Signature<C> {}
+impl<C, H> Copy for EcdsaSignature<C, H> {}
 
-impl<C: Curve> Signature<C> {
-    pub fn new(r: modular::Num, s: modular::Num) -> Result<Self, InvalidSignature> {
+impl<C: Curve, H> EcdsaSignature<C, H> {
+    pub fn new(r: Num, s: Num) -> Result<Self, InvalidSignature> {
         // Verify that r and s are reduced modulo N.
         if r < C::N && s < C::N {
             Ok(Self {
                 r,
                 s,
                 _curve: Default::default(),
+                _hash: Default::default(),
             })
         } else {
             Err(InvalidSignature)
         }
     }
 
-    pub fn r(&self) -> modular::Num {
+    pub fn r(&self) -> Num {
         self.r
     }
 
-    pub fn s(&self) -> modular::Num {
+    pub fn s(&self) -> Num {
         self.s
     }
 }

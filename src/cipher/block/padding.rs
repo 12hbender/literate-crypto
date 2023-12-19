@@ -2,13 +2,6 @@ mod pkcs7;
 
 pub use pkcs7::Pkcs7;
 
-// TODO I've realized that my approach of doing things "in-place" only saves a
-// single heap allocation. This is not worth it. Instead, pad should split into
-// blocks I think, and Encrypt/Decrypt can take references instead
-// TODO No, the real mistake is that I'm shoehorning the message schedule into
-// the padding function. How about making the encrypt call mutable, and updating
-// the schedule there?
-
 /// A scheme to pad messages to be a multiple of some block size.
 ///
 /// [Block ciphers](`crate::BlockCipher`) expect the input data to be a multiple

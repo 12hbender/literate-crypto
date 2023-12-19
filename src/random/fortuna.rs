@@ -43,7 +43,10 @@ pub struct Fortuna<Ent, Enc = Aes256, H = Sha256> {
     hash: H,
 }
 
-impl<Ent, Enc: BlockEncrypt, H> Fortuna<Ent, Enc, H> {
+impl<Ent, Enc, H, const BLOCK_SIZE: usize> Fortuna<Ent, Enc, H>
+where
+    Enc: BlockEncrypt<EncryptionBlock = [u8; BLOCK_SIZE]>,
+{
     pub fn new(entropy: Ent, enc: Enc, hash: H) -> Result<Self, BlockSizeTooSmall> {
         Ok(Self {
             entropy,

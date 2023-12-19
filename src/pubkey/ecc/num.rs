@@ -12,13 +12,13 @@ use {
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct Num([u64; Self::WIDTH]);
 
-pub const ZERO: Num = Num([0, 0, 0, 0]);
-pub const ONE: Num = Num([1, 0, 0, 0]);
-pub const TWO: Num = Num([2, 0, 0, 0]);
-pub const THREE: Num = Num([3, 0, 0, 0]);
-pub const SEVEN: Num = Num([7, 0, 0, 0]);
-
 impl Num {
+    pub const ZERO: Num = Num([0, 0, 0, 0]);
+    pub const ONE: Num = Num([1, 0, 0, 0]);
+    pub const TWO: Num = Num([2, 0, 0, 0]);
+    pub const THREE: Num = Num([3, 0, 0, 0]);
+    pub const SEVEN: Num = Num([7, 0, 0, 0]);
+
     /// The size of this number in 64-bit words.
     pub const WIDTH: usize = 4;
     /// The size of this number in bits.
@@ -210,15 +210,15 @@ impl Num {
     #[docext]
     #[must_use]
     pub fn inv(&self, p: Self) -> Option<Self> {
-        if *self == ZERO {
+        if *self == Self::ZERO {
             return None;
         }
 
         let mut u = reduce(self.0, p.0);
         let mut v = p.0;
-        let mut x1 = ONE;
-        let mut x2 = ZERO;
-        while u != ZERO.0 {
+        let mut x1 = Self::ONE;
+        let mut x2 = Self::ZERO;
+        while u != Self::ZERO.0 {
             let (q, r) = div(v, u);
             v = u;
             u = r.0;

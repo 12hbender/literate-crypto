@@ -3,6 +3,7 @@ use crate::Cipher;
 mod cbc;
 mod ctr;
 mod ecb;
+
 // TODO Implement GCM, start from mathematical foundations for polynomials,
 // those MIGHT also be useful for ZKP or something else, or maybe not.
 

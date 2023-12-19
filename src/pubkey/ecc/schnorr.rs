@@ -1,6 +1,6 @@
 use {
     crate::{
-        ecc::{modular, Coordinates, Curve, PrivateKey, PublicKey},
+        ecc::{num, Coordinates, Curve, PrivateKey, PublicKey},
         util::{self, CollectVec},
         Csprng,
         Hash,
@@ -35,12 +35,12 @@ where
 {
     type PublicKey = PublicKey<C>;
     type PrivateKey = PrivateKey<C>;
-    type Signature = Signature<C, H>;
+    type Signature = SchnorrSignature<C, H>;
 
     fn sign(&mut self, key: Self::PrivateKey, msg: &[u8]) -> Self::Signature {
         assert!(DIGEST_SIZE >= C::SIZE);
         'retry: loop {
-            let k = modular::Num::from_le_bytes(array::from_fn(|_| self.rng.next().unwrap()));
+            let k = num::Num::from_le_bytes(array::from_fn(|_| self.rng.next().unwrap()));
             let r = match (k * C::g()).coordinates() {
                 super::Coordinates::Infinity => continue 'retry,
                 super::Coordinates::Finite(x, _) => x,
@@ -51,10 +51,10 @@ where
                     .chain(msg.iter().copied())
                     .collect_vec(),
             );
-            let e = modular::Num::from_le_bytes(util::resize(e));
+            let e = num::Num::from_le_bytes(util::resize(e));
             let e = e.reduce(C::N);
             let s = k.sub(key.0.mul(e, C::N), C::N);
-            return Signature {
+            return SchnorrSignature {
                 s,
                 e,
                 _curve: Default::default(),
@@ -78,7 +78,7 @@ where
                         .chain(msg.iter().copied())
                         .collect_vec(),
                 );
-                let e = modular::Num::from_le_bytes(util::resize(e));
+                let e = num::Num::from_le_bytes(util::resize(e));
                 let e = e.reduce(C::N);
                 if e == sig.e {
                     Ok(())
@@ -91,23 +91,23 @@ where
 }
 
 #[derive(Debug)]
-pub struct Signature<C, H> {
-    s: modular::Num,
-    e: modular::Num,
+pub struct SchnorrSignature<C, H> {
+    s: num::Num,
+    e: num::Num,
     _curve: PhantomData<C>,
     _hash: PhantomData<H>,
 }
 
-impl<C, H> Clone for Signature<C, H> {
+impl<C, H> Clone for SchnorrSignature<C, H> {
     fn clone(&self) -> Self {
         *self
     }
 }
 
-impl<C, H> Copy for Signature<C, H> {}
+impl<C, H> Copy for SchnorrSignature<C, H> {}
 
-impl<C: Curve, H> Signature<C, H> {
-    pub fn new(s: modular::Num, e: modular::Num) -> Result<Self, InvalidSignature> {
+impl<C: Curve, H> SchnorrSignature<C, H> {
+    pub fn new(s: num::Num, e: num::Num) -> Result<Self, InvalidSignature> {
         // Verify that r and s are reduced modulo N.
         if s < C::N && e < C::N {
             Ok(Self {
@@ -121,11 +121,11 @@ impl<C: Curve, H> Signature<C, H> {
         }
     }
 
-    pub fn s(&self) -> modular::Num {
+    pub fn s(&self) -> num::Num {
         self.s
     }
 
-    pub fn e(&self) -> modular::Num {
+    pub fn e(&self) -> num::Num {
         self.e
     }
 }
