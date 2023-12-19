@@ -5,7 +5,7 @@
 //! for a random plaintext and key.
 
 use {
-    crate::{Aes128, Aes192, Aes256, Cbc, Cipher, Ctr, Ecb, Pkcs7},
+    crate::{util::CollectVec, Aes128, Aes192, Aes256, Cbc, Cipher, Ctr, Ecb, Pkcs7},
     rand::Rng,
     std::fmt,
 };
@@ -91,9 +91,13 @@ where
     Cip::EncryptionErr: fmt::Debug,
     Cip::DecryptionErr: fmt::Debug,
 {
-    let data: Vec<u8> = (0..data_size).map(|_| rand::thread_rng().gen()).collect();
+    let data = (0..data_size)
+        .map(|_| rand::thread_rng().gen())
+        .collect_vec();
     let key_size = std::mem::size_of::<Cip::Key>();
-    let key: Vec<u8> = (0..key_size).map(|_| rand::thread_rng().gen()).collect();
+    let key = (0..key_size)
+        .map(|_| rand::thread_rng().gen())
+        .collect_vec();
     let key = Cip::Key::try_from(key.as_slice()).unwrap_or_else(|_| unreachable!());
 
     let ciphertext = cip.encrypt(data.clone(), key.clone()).unwrap();

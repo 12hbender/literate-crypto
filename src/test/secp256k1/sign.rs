@@ -1,22 +1,31 @@
 use crate::{
-    ecc::{ecdsa, modular, Curve},
+    ecc::{self, ecdsa, modular, Curve},
+    schnorr,
+    test::fortuna::NoEntropy,
+    util::CollectVec,
+    Aes256,
     Ecdsa,
+    Fortuna,
+    Schnorr,
     Secp256k1,
+    Sha256,
     Sha3_256,
     SignatureScheme,
 };
 
-/// Assert that valid signatures verify successfully, and invalid signatures
-/// fail to verify.
+/// Assert that valid ECDSA signatures verify successfully, and invalid
+/// signatures fail to verify.
 #[test]
-fn sign() {
-    let ecdsa = Ecdsa::new(Secp256k1::default(), Sha3_256::default());
-    let data: Vec<_> = (0u8..100).collect();
+fn ecdsa() {
+    let mut ecdsa = Ecdsa::new(Secp256k1::default(), Sha3_256::default());
+    let data = (0u8..100).collect_vec();
     let privkey = rand_privkey();
-    let pubkey = ecdsa::PublicKey::derive(privkey);
+    let pubkey = ecc::PublicKey::derive(privkey);
+
     let sig = ecdsa.sign(privkey, &data);
     // A valid signature should verify successfully.
     assert!(ecdsa.verify(pubkey, &data, &sig).is_ok());
+
     // Invalidate the signature by adding random numbers to r and s.
     let sig = ecdsa::Signature::new(
         sig.r().add(rand_num(), Secp256k1::N),
@@ -27,9 +36,36 @@ fn sign() {
     assert!(ecdsa.verify(pubkey, &data, &sig).is_err());
 }
 
-fn rand_privkey() -> ecdsa::PrivateKey<Secp256k1> {
+/// Assert that valid Schnorr signatures verify successfully, and invalid
+/// signatures fail to verify.
+#[test]
+fn schnorr() {
+    let mut schnorr = Schnorr::new(
+        Secp256k1::default(),
+        Sha3_256::default(),
+        Fortuna::new(NoEntropy, Aes256::default(), Sha256::default()).unwrap(),
+    );
+    let data = (0u8..100).collect_vec();
+    let privkey = rand_privkey();
+    let pubkey = ecc::PublicKey::derive(privkey);
+
+    let sig = schnorr.sign(privkey, &data);
+    // A valid signature should verify successfully.
+    assert!(schnorr.verify(pubkey, &data, &sig).is_ok());
+
+    // Invalidate the signature by adding random numbers to r and s.
+    let sig = schnorr::Signature::new(
+        sig.s().add(rand_num(), Secp256k1::N),
+        sig.e().add(rand_num(), Secp256k1::N),
+    )
+    .unwrap();
+    // An invalid signature should fail to verify.
+    assert!(schnorr.verify(pubkey, &data, &sig).is_err());
+}
+
+fn rand_privkey() -> ecc::PrivateKey<Secp256k1> {
     loop {
-        if let Ok(key) = ecdsa::PrivateKey::new(rand_num()) {
+        if let Ok(key) = ecc::PrivateKey::new(rand_num()) {
             return key;
         }
     }

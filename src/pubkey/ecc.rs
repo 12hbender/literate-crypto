@@ -1,15 +1,66 @@
 //! Elliptic curve cryptography.
 
 use {
+    crate::InvalidPrivateKey,
     docext::docext,
     std::{fmt, marker::PhantomData, ops},
 };
 
 pub mod ecdsa;
 pub mod modular;
+pub mod schnorr;
 mod secp256k1;
 
-pub use {ecdsa::Ecdsa, secp256k1::Secp256k1};
+pub use {ecdsa::Ecdsa, schnorr::Schnorr, secp256k1::Secp256k1};
+
+// TODO Definitely move the curve and point into a curve module and re-export
+
+#[derive(Debug)]
+pub struct PrivateKey<C>(modular::Num, PhantomData<C>);
+
+impl<C> Clone for PrivateKey<C> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<C> Copy for PrivateKey<C> {}
+
+impl<C: Curve> PrivateKey<C> {
+    pub fn new(n: modular::Num) -> Result<Self, InvalidPrivateKey> {
+        // Verify that the private key is reduced modulo N.
+        if n < C::N {
+            Ok(Self(n, Default::default()))
+        } else {
+            Err(InvalidPrivateKey)
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct PublicKey<C>(Point<C>);
+
+impl<C> Clone for PublicKey<C> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<C> Copy for PublicKey<C> {}
+
+impl<C: Curve> PublicKey<C> {
+    pub fn new(p: Point<C>) -> Self {
+        Self(p)
+    }
+
+    /// Derive the public key from a [private key](PrivateKey).
+    ///
+    /// This is done by simply multiplying the private key with the [generator
+    /// point](crate::ecc::Curve::g).
+    pub fn derive(key: PrivateKey<C>) -> Self {
+        Self(key.0 * C::g())
+    }
+}
 
 /// An elliptic curve.
 ///
@@ -200,6 +251,8 @@ impl<C: Curve> Point<C> {
         Self(Coordinates::Infinity, Default::default())
     }
 
+    // TODO Considering the way this is being used, it might make more sense to have
+    // x() and y() methods which return Option? Though this is less explicit
     pub fn coordinates(&self) -> Coordinates {
         self.0
     }

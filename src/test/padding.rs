@@ -5,7 +5,7 @@
 //! for any random data.
 
 use {
-    crate::{Padding, Pkcs7},
+    crate::{util::CollectVec, Padding, Pkcs7},
     rand::Rng,
 };
 
@@ -26,7 +26,9 @@ fn test<Pad: Padding>(pad: Pad, n: usize, data_len: usize)
 where
     Pad::Err: std::fmt::Debug,
 {
-    let data: Vec<u8> = (0..data_len).map(|_| rand::thread_rng().gen()).collect();
+    let data = (0..data_len)
+        .map(|_| rand::thread_rng().gen())
+        .collect_vec();
 
     let padded = pad.pad(data.clone(), n);
     assert!(

@@ -37,3 +37,13 @@ where
         Some(result)
     }
 }
+
+pub(crate) trait CollectVec: Iterator {
+    fn collect_vec(self) -> Vec<Self::Item>;
+}
+
+impl<T: Iterator> CollectVec for T {
+    fn collect_vec(self) -> Vec<Self::Item> {
+        self.collect()
+    }
+}

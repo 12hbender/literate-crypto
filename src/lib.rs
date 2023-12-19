@@ -17,12 +17,11 @@
 //!     - [Elliptic Curve Math](ecc::Curve)
 //!         - [ECDSA](Ecdsa)
 
+#![forbid(unsafe_code)]
 #![feature(return_position_impl_trait_in_trait)]
 #![feature(array_chunks)]
 #![feature(associated_type_bounds)]
-#![feature(proc_macro_hygiene)]
 #![feature(custom_inner_attributes)]
-#![forbid(unsafe_code)]
 #![feature(impl_trait_in_assoc_type)]
 
 #[cfg(test)]
@@ -77,6 +76,16 @@ pub use {
         Sha3_512,
     },
     mac::{Hmac, Mac},
-    pubkey::{ecc, ecdsa, Ecdsa, InvalidPrivateKey, InvalidSignature, Secp256k1, SignatureScheme},
+    pubkey::{
+        ecc,
+        ecdsa,
+        schnorr,
+        Ecdsa,
+        InvalidPrivateKey,
+        InvalidSignature,
+        Schnorr,
+        Secp256k1,
+        SignatureScheme,
+    },
     random::{Csprng, Entropy, Fortuna},
 };

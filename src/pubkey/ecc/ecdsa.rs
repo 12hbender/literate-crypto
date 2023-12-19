@@ -1,9 +1,9 @@
 use {
     crate::{
-        ecc::{Curve, Point},
+        ecc::{Curve, PrivateKey, PublicKey},
         pubkey::ecc::{modular, Coordinates},
+        util,
         Hash,
-        InvalidPrivateKey,
         InvalidSignature,
         SignatureScheme,
     },
@@ -75,18 +75,18 @@ where
     type PrivateKey = PrivateKey<C>;
     type Signature = Signature<C>;
 
-    fn sign(&self, key: Self::PrivateKey, msg: &[u8]) -> Self::Signature {
+    fn sign(&mut self, key: Self::PrivateKey, msg: &[u8]) -> Self::Signature {
         assert!(DIGEST_SIZE >= C::SIZE);
         let e = self.hash.hash(msg);
-        let e = modular::Num::from_le_bytes(resize(e));
+        let e = modular::Num::from_le_bytes(util::resize(e));
         let mut preimage: Vec<u8> = Default::default();
         preimage.extend(msg);
         preimage.extend(key.0.to_le_bytes());
-        let mut k = modular::Num::from_le_bytes(resize(self.hash.hash(&preimage)));
+        let mut k = modular::Num::from_le_bytes(util::resize(self.hash.hash(&preimage)));
         let mut r;
         let mut s;
         'retry: loop {
-            k = modular::Num::from_le_bytes(resize(self.hash.hash(&k.to_le_bytes())));
+            k = modular::Num::from_le_bytes(util::resize(self.hash.hash(&k.to_le_bytes())));
             r = match (k * C::g()).coordinates() {
                 Coordinates::Infinity => continue 'retry,
                 Coordinates::Finite(x, _) => x,
@@ -106,13 +106,13 @@ where
     }
 
     fn verify(
-        &self,
+        &mut self,
         key: Self::PublicKey,
         msg: &[u8],
         sig: &Self::Signature,
     ) -> Result<(), InvalidSignature> {
         assert!(DIGEST_SIZE >= C::SIZE);
-        let e = modular::Num::from_le_bytes(resize(self.hash.hash(msg)));
+        let e = modular::Num::from_le_bytes(util::resize(self.hash.hash(msg)));
         let i = sig.s.inv(C::N).unwrap();
         let u = e.mul(i, C::N);
         let v = sig.r.mul(i, C::N);
@@ -129,59 +129,7 @@ where
     }
 }
 
-fn resize<const N: usize, const R: usize>(num: [u8; N]) -> [u8; R] {
-    let mut result = [0; R];
-    result.iter_mut().zip(num.iter()).for_each(|(a, b)| *a = *b);
-    result
-}
-
-#[derive(Debug)]
-pub struct PrivateKey<C>(modular::Num, PhantomData<C>);
-
-impl<C> Clone for PrivateKey<C> {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-
-impl<C> Copy for PrivateKey<C> {}
-
-impl<C: Curve> PrivateKey<C> {
-    pub fn new(n: modular::Num) -> Result<Self, InvalidPrivateKey> {
-        // Verify that the private key is reduced modulo N.
-        if n < C::N {
-            Ok(Self(n, Default::default()))
-        } else {
-            Err(InvalidPrivateKey)
-        }
-    }
-}
-
-#[derive(Debug)]
-pub struct PublicKey<C>(Point<C>);
-
-impl<C> Clone for PublicKey<C> {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-
-impl<C> Copy for PublicKey<C> {}
-
-impl<C: Curve> PublicKey<C> {
-    pub fn new(p: Point<C>) -> Self {
-        Self(p)
-    }
-
-    /// Derive the public key from a [private key](PrivateKey).
-    ///
-    /// This is done by simply multiplying the private key with the [generator
-    /// point](crate::ecc::Curve::g).
-    pub fn derive(key: PrivateKey<C>) -> Self {
-        Self(key.0 * C::g())
-    }
-}
-
+// TODO Add H parameter here (like schnorr)
 #[derive(Debug)]
 pub struct Signature<C> {
     r: modular::Num,

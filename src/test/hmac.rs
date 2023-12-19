@@ -1,4 +1,4 @@
-use crate::{Hmac, Mac, Sha1, Sha256, Sha3_512};
+use crate::{Hmac, Mac, Sha1, Sha256};
 
 #[test]
 fn hmac_sha1() {

@@ -2,7 +2,7 @@ use std::fmt;
 
 pub mod ecc;
 
-pub use ecc::{ecdsa, Ecdsa, Secp256k1};
+pub use ecc::{ecdsa, schnorr, Ecdsa, Schnorr, Secp256k1};
 
 /// A signature scheme is a method by which an actor proves that he generated a
 /// message.
@@ -28,16 +28,36 @@ pub trait SignatureScheme {
     type Signature;
 
     /// Sign the given message with the given private key.
-    fn sign(&self, key: Self::PrivateKey, msg: &[u8]) -> Self::Signature;
+    fn sign(&mut self, key: Self::PrivateKey, msg: &[u8]) -> Self::Signature;
 
     /// Verify that the given message was signed by the private key
     /// corresponding to the given public key. If verification fails, an
     /// [`InvalidSignature`] error is returned.
     fn verify(
-        &self,
+        &mut self,
         key: Self::PublicKey,
         msg: &[u8],
         sig: &Self::Signature,
+    ) -> Result<(), InvalidSignature>;
+}
+
+// TODO Have a "naive" implementation for this (simply aggregating and checking
+// individual signatures), as well as a SchnorrMultisig implementation.
+pub trait MultisigScheme {
+    type Multisig: Default;
+    type PublicKey;
+    type PrivateKey;
+
+    /// Sign the given message with the given private key and append the
+    /// individual signature to the given multisig.
+    fn sign(&mut self, key: Self::PrivateKey, msg: &[u8], sig: Self::Multisig) -> Self::Multisig;
+
+    /// Verify the given multisig.
+    fn verify(
+        &mut self,
+        signers: Self::PublicKey,
+        msg: &[u8],
+        sig: &Self::Multisig,
     ) -> Result<(), InvalidSignature>;
 }
 

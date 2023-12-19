@@ -1,5 +1,8 @@
 use {
-    crate::ecc::{Curve, Point},
+    crate::{
+        ecc::{Curve, Point},
+        util,
+    },
     docext::docext,
     std::{cmp, iter, mem, ops},
 };
@@ -105,6 +108,11 @@ impl Num {
     /// Modular equality with modulus `p`.
     pub fn eq(self, n: Self, p: Self) -> bool {
         reduce(self.0, p.0) == reduce(n.0, p.0)
+    }
+
+    /// Reduction modulo `p`.
+    pub fn reduce(self, p: Self) -> Self {
+        Self(reduce(self.0, p.0))
     }
 
     /// Get the modular multiplicative inverse of the number by using the
@@ -376,8 +384,8 @@ fn div<const N: usize>(n: [u64; N], d: [u64; N]) -> ([u64; N], Rem<N>) {
 #[must_use]
 fn reduce<const N: usize, const P: usize>(n: [u64; N], p: [u64; P]) -> [u64; P] {
     assert!(N >= P);
-    let (_div, rem) = div(n, resize(p));
-    resize(rem.0)
+    let (_div, rem) = div(n, util::resize(p));
+    util::resize(rem.0)
 }
 
 /// Shift all of the bits left by one.
@@ -414,14 +422,6 @@ fn set_bit<const N: usize>(mut n: [u64; N], i: usize) -> [u64; N] {
     let i = i % u64::BITS as usize;
     n[digit] |= 1 << i;
     n
-}
-
-/// Resize a number into a different width by either appending zeros to the more
-/// significant bytes, or by dropping the most significant bytes.
-fn resize<const N: usize, const R: usize>(num: [u64; N]) -> [u64; R] {
-    let mut result = [0; R];
-    result.iter_mut().zip(num.iter()).for_each(|(a, b)| *a = *b);
-    result
 }
 
 /// Multiply the point by a scalar.
