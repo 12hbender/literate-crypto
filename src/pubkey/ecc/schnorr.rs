@@ -39,6 +39,7 @@ where
 
     fn sign(&mut self, key: Self::PrivateKey, msg: &[u8]) -> Self::Signature {
         assert!(DIGEST_SIZE >= C::SIZE);
+        let pubkey = key.derive();
         'retry: loop {
             let k = num::Num::from_le_bytes(array::from_fn(|_| self.rng.next().unwrap()));
             let r = match (k * C::g()).coordinates() {
@@ -46,8 +47,11 @@ where
                 super::Coordinates::Finite(x, _) => x,
             };
             let e = self.hash.hash(
-                &r.to_le_bytes()
+                &pubkey
+                    .x()
+                    .to_le_bytes()
                     .into_iter()
+                    .chain(r.to_le_bytes())
                     .chain(msg.iter().copied())
                     .collect_vec(),
             );
@@ -69,12 +73,14 @@ where
         msg: &[u8],
         sig: &Self::Signature,
     ) -> Result<(), crate::InvalidSignature> {
-        match (sig.s * C::g() + sig.e * key.0).coordinates() {
+        match (sig.s * C::g() + sig.e * key.point()).coordinates() {
             Coordinates::Infinity => Err(InvalidSignature),
             Coordinates::Finite(r, _) => {
                 let e = self.hash.hash(
-                    &r.to_le_bytes()
+                    &key.x()
+                        .to_le_bytes()
                         .into_iter()
+                        .chain(r.to_le_bytes())
                         .chain(msg.iter().copied())
                         .collect_vec(),
                 );

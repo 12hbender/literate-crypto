@@ -2,7 +2,7 @@ use std::fmt;
 
 pub mod ecc;
 
-pub use ecc::{Ecdsa, EcdsaSignature, Schnorr, SchnorrSignature, Secp256k1};
+pub use ecc::{Ecdsa, EcdsaSignature, InvalidPrivateKey, Schnorr, SchnorrSignature, Secp256k1};
 
 /// A signature scheme is a method by which an actor proves that he generated a
 /// message.
@@ -72,15 +72,3 @@ impl fmt::Display for InvalidSignature {
 }
 
 impl std::error::Error for InvalidSignature {}
-
-/// Error indicating that a private key is invalid.
-#[derive(Debug, Clone, Copy)]
-pub struct InvalidPrivateKey;
-
-impl fmt::Display for InvalidPrivateKey {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "invalid private key")
-    }
-}
-
-impl std::error::Error for InvalidPrivateKey {}

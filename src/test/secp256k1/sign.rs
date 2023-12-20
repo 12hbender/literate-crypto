@@ -21,7 +21,7 @@ fn ecdsa() {
     let mut ecdsa = Ecdsa::new(Secp256k1::default(), Sha3_256::default());
     let data = (0u8..100).collect_vec();
     let privkey = rand_privkey();
-    let pubkey = ecc::PublicKey::derive(privkey);
+    let pubkey = privkey.derive();
 
     let sig = ecdsa.sign(privkey, &data);
     // A valid signature should verify successfully.
@@ -48,7 +48,7 @@ fn schnorr() {
     );
     let data = (0u8..100).collect_vec();
     let privkey = rand_privkey();
-    let pubkey = ecc::PublicKey::derive(privkey);
+    let pubkey = privkey.derive();
 
     let sig = schnorr.sign(privkey, &data);
     // A valid signature should verify successfully.

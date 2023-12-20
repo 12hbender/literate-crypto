@@ -117,7 +117,7 @@ where
         let i = sig.s.inv(C::N).unwrap();
         let u = e.mul(i, C::N);
         let v = sig.r.mul(i, C::N);
-        match (u * C::g() + v * key.0).coordinates() {
+        match (u * C::g() + v * key.point()).coordinates() {
             Coordinates::Finite(x, _) => {
                 if x.eq(sig.r, C::N) {
                     Ok(())
