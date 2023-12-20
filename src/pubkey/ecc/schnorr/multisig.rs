@@ -1,6 +1,7 @@
 use {
     crate::{
-        ecc::{Curve, Num, PrivateKey, PublicKey},
+        ecc,
+        ecc::{Curve, Num, Point, PrivateKey, PublicKey},
         util::{self, CollectVec},
         Csprng,
         Hash,
@@ -10,7 +11,8 @@ use {
         SchnorrSignature,
         SignatureScheme,
     },
-    std::{iter, marker::PhantomData},
+    core::fmt,
+    std::marker::PhantomData,
 };
 
 pub struct MultiSchnorr<C, H, R: Csprng>(Schnorr<C, H, R>);
@@ -38,8 +40,8 @@ where
         let h_agg = h_agg(&self.0.hash, &pubkeys, pubkey);
         let h_sig = h_sig(&self.0.hash, &pubkeys, randomness, msg);
         let c = h_agg.mul(h_sig, C::N);
-        let s = randomness.local.add(key.0.mul(c, C::N), C::N);
-        SchnorrSignature::new(sig.s().add(s, C::N), randomness.total).unwrap()
+        let s = randomness.local.sub(key.0.mul(c, C::N), C::N);
+        SchnorrSignature::new(sig.s().add(s, C::N), h_sig).unwrap()
     }
 
     fn verify(
@@ -67,6 +69,7 @@ fn h_agg<C: Curve, const DIGEST_SIZE: usize>(
                 .collect_vec(),
         ),
     ))
+    .reduce(C::N)
 }
 
 fn h_sig<C: Curve, const DIGEST_SIZE: usize>(
@@ -86,6 +89,7 @@ fn h_sig<C: Curve, const DIGEST_SIZE: usize>(
                 .collect_vec(),
         ),
     ))
+    .reduce(C::N)
 }
 
 // TODO Explain this, explain the exchange protocol
@@ -105,19 +109,20 @@ impl<C> Clone for SchnorrRandomness<C> {
 impl<C> Copy for SchnorrRandomness<C> {}
 
 impl<C: Curve> SchnorrRandomness<C> {
-    pub fn new(local: Num, others: &[Num]) -> Self {
-        let total = iter::once(&local)
-            .chain(others)
-            .fold(Num::ZERO, |a, b| a.add(*b, C::N));
-        Self {
-            local,
-            total,
-            _curve: Default::default(),
+    pub fn new(local: Num, others: &[Point<C>]) -> Result<Self, InvalidSchnorrRandomness> {
+        let total = others.iter().fold(local * C::g(), |a, b| a + *b);
+        match total.coordinates() {
+            ecc::Coordinates::Infinity => Err(InvalidSchnorrRandomness),
+            ecc::Coordinates::Finite(x, _) => Ok(Self {
+                local,
+                total: x,
+                _curve: Default::default(),
+            }),
         }
     }
 }
 
-// /Combine multiple pubkeys into a single multisig pubkey.
+/// Combine multiple pubkeys into a single multisig pubkey.
 fn combine<C: Curve, const DIGEST_SIZE: usize>(
     hash: &impl Hash<Digest = [u8; DIGEST_SIZE]>,
     keys: &[PublicKey<C>],
@@ -137,4 +142,16 @@ fn encode<C: Curve>(keys: &[PublicKey<C>]) -> [u8; 32] {
         .map(|p| p.x())
         .fold(Num::ZERO, |a, b| a.add(b, C::N))
         .to_le_bytes()
+}
+
+#[derive(Debug)]
+pub struct InvalidSchnorrRandomness;
+
+impl fmt::Display for InvalidSchnorrRandomness {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "invalid randomness (bad luck, regenerate local randomness)"
+        )
+    }
 }

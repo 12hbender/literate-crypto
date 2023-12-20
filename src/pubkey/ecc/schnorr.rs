@@ -12,7 +12,7 @@ use {
 
 mod multisig;
 
-pub use multisig::MultiSchnorr;
+pub use multisig::{MultiSchnorr, SchnorrRandomness};
 
 #[derive(Debug)]
 pub struct Schnorr<C, H, R: Csprng> {
@@ -89,8 +89,7 @@ where
                         .collect_vec(),
                 );
                 let e = num::Num::from_le_bytes(util::resize(e));
-                let e = e.reduce(C::N);
-                if e == sig.e {
+                if e.eq(sig.e, C::N) {
                     Ok(())
                 } else {
                     Err(InvalidSignature)

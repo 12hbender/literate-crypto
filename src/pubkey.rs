@@ -2,7 +2,16 @@ use std::fmt;
 
 pub mod ecc;
 
-pub use ecc::{Ecdsa, EcdsaSignature, InvalidPrivateKey, Schnorr, SchnorrSignature, Secp256k1};
+pub use ecc::{
+    Ecdsa,
+    EcdsaSignature,
+    InvalidPrivateKey,
+    MultiSchnorr,
+    Schnorr,
+    SchnorrRandomness,
+    SchnorrSignature,
+    Secp256k1,
+};
 
 /// A signature scheme is a method by which an actor proves that he generated a
 /// message.

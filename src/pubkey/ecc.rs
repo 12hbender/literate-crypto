@@ -12,7 +12,7 @@ pub use {
     curve::{Coordinates, Curve, InvalidPoint, Point},
     ecdsa::{Ecdsa, EcdsaSignature},
     num::Num,
-    schnorr::{Schnorr, SchnorrSignature},
+    schnorr::{MultiSchnorr, Schnorr, SchnorrRandomness, SchnorrSignature},
     secp256k1::Secp256k1,
 };
 
