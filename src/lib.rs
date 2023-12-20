@@ -82,6 +82,7 @@ pub use {
         EcdsaSignature,
         InvalidPrivateKey,
         InvalidSignature,
+        MultisigScheme,
         Schnorr,
         SchnorrSignature,
         Secp256k1,

@@ -10,19 +10,23 @@ use {
     std::{array, marker::PhantomData},
 };
 
+mod multisig;
+
+pub use multisig::MultiSchnorr;
+
 #[derive(Debug)]
 pub struct Schnorr<C, H, R: Csprng> {
+    _curve: C,
     hash: H,
     rng: R::IntoIter,
-    _curve: C,
 }
 
 impl<C, H, R: Csprng> Schnorr<C, H, R> {
     pub fn new(curve: C, hash: H, rng: R) -> Self {
         Self {
+            _curve: curve,
             hash,
             rng: rng.into_iter(),
-            _curve: curve,
         }
     }
 }
@@ -43,8 +47,8 @@ where
         'retry: loop {
             let k = num::Num::from_le_bytes(array::from_fn(|_| self.rng.next().unwrap()));
             let r = match (k * C::g()).coordinates() {
-                super::Coordinates::Infinity => continue 'retry,
-                super::Coordinates::Finite(x, _) => x,
+                Coordinates::Infinity => continue 'retry,
+                Coordinates::Finite(x, _) => x,
             };
             let e = self.hash.hash(
                 &pubkey
@@ -72,7 +76,7 @@ where
         key: Self::PublicKey,
         msg: &[u8],
         sig: &Self::Signature,
-    ) -> Result<(), crate::InvalidSignature> {
+    ) -> Result<(), InvalidSignature> {
         match (sig.s * C::g() + sig.e * key.point()).coordinates() {
             Coordinates::Infinity => Err(InvalidSignature),
             Coordinates::Finite(r, _) => {
@@ -102,6 +106,17 @@ pub struct SchnorrSignature<C, H> {
     e: num::Num,
     _curve: PhantomData<C>,
     _hash: PhantomData<H>,
+}
+
+impl<C, H> Default for SchnorrSignature<C, H> {
+    fn default() -> Self {
+        Self {
+            s: Default::default(),
+            e: Default::default(),
+            _curve: Default::default(),
+            _hash: Default::default(),
+        }
+    }
 }
 
 impl<C, H> Clone for SchnorrSignature<C, H> {

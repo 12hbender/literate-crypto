@@ -55,7 +55,7 @@ pub trait MultisigScheme {
     /// Verify the given multisig.
     fn verify(
         &mut self,
-        signers: Self::PublicKey,
+        keys: &[Self::PublicKey],
         msg: &[u8],
         sig: &Self::Multisig,
     ) -> Result<(), InvalidSignature>;
