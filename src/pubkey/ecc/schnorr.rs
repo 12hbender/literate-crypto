@@ -12,8 +12,36 @@ use {
 
 mod multisig;
 
+use docext::docext;
 pub use multisig::{MultiSchnorr, SchnorrRandomness};
 
+// TODO I need a separate place to document the ecdlp assumption, maybe in the
+// ecc module
+/// Schnorr is a simple, efficient, and provably secure (under the ECDLP
+/// assumption) [signature algorithm](crate::SignatureScheme).
+///
+/// To sign a message $m$, the algorithm first generates a random secret number
+/// $r \in [1, N - 1]$ and the corresponding public part $R = rG$, where $G$ is
+/// the [generator point](crate::ecc::Curve::g) of the underlying [elliptic
+/// curve](crate::ecc::Curve), and $N$ is the [order of the generator
+/// point](crate::ecc::Curve::N). Then the message is [hashed](crate::Hash)
+/// along with $R$ using some hash function $H$, yielding $e = H(R \parallel
+/// m)$. Finally, $s = r - ep$, where $p$ is the private key. The resulting
+/// signature is the pair $(s, e)$.
+///
+/// To verify the message $m$ given the signature $(s, e)$, calculate $R = sG +
+/// eP$, where $P = pG$ is the public key corresponding to the private key $p$,
+/// and check that $H(R \parallel m) = e$. This works because
+///
+/// $$
+/// R = sG + eP \\
+/// R = (r - ep)G + epG \\
+/// R = rG - epG + epG \\
+/// R = rG
+/// $$
+///
+/// which is the original definition of $R$ from the signing procedure.
+#[docext]
 #[derive(Debug)]
 pub struct Schnorr<C, H, R: Csprng> {
     _curve: C,

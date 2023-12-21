@@ -37,11 +37,11 @@ where
         assert!(DIGEST_SIZE >= C::SIZE);
         let (key, pubkeys, randomness) = key;
         let pubkey = key.derive();
-        let h_agg = h_agg(&self.0.hash, &pubkeys, pubkey);
-        let h_sig = h_sig(&self.0.hash, &pubkeys, randomness, msg);
-        let c = h_agg.mul(h_sig, C::N);
+        let a = h_agg(&self.0.hash, &pubkeys, pubkey);
+        let e = h_sig(&self.0.hash, &pubkeys, randomness, msg);
+        let c = a.mul(e, C::N);
         let s = randomness.local.sub(key.0.mul(c, C::N), C::N);
-        SchnorrSignature::new(sig.s().add(s, C::N), h_sig).unwrap()
+        SchnorrSignature::new(sig.s().add(s, C::N), e).unwrap()
     }
 
     fn verify(
