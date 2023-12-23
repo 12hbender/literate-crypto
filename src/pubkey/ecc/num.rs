@@ -8,7 +8,7 @@ use {
 };
 
 /// Number used for modular arithmetic. Internally stored in little-endian
-/// format.
+/// (least-significant byte first) format.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct Num([u64; Self::WIDTH]);
 

@@ -7,12 +7,12 @@ use {
         InvalidSignature,
         SignatureScheme,
     },
-    std::{array, marker::PhantomData},
+    docext::docext,
+    std::{array, fmt, marker::PhantomData},
 };
 
 mod multisig;
 
-use docext::docext;
 pub use multisig::{MultiSchnorr, SchnorrRandomness};
 
 // TODO I need a separate place to document the ecdlp assumption, maybe in the
@@ -42,7 +42,6 @@ pub use multisig::{MultiSchnorr, SchnorrRandomness};
 ///
 /// which is the original definition of $R$ from the signing procedure.
 #[docext]
-#[derive(Debug)]
 pub struct Schnorr<C, H, R: Csprng> {
     _curve: C,
     hash: H,
@@ -175,5 +174,11 @@ impl<C: Curve, H> SchnorrSignature<C, H> {
 
     pub fn e(&self) -> num::Num {
         self.e
+    }
+}
+
+impl<C, H, R: Csprng> fmt::Debug for Schnorr<C, H, R> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_tuple("Schnorr").finish()
     }
 }

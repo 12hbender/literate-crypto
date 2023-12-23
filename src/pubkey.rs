@@ -50,8 +50,14 @@ pub trait SignatureScheme {
     ) -> Result<(), InvalidSignature>;
 }
 
-// TODO Have a "naive" implementation for this (simply aggregating and checking
-// individual signatures), as well as a SchnorrMultisig implementation.
+/// A multisig scheme is similar to a [regular signature], except that it is
+/// signed by multiple private keys and verified with multiple public keys.
+///
+/// A multisig scheme allows multiple actors to collaboratively sign a message,
+/// and allows any verifier to reject the message unless every actor contributed
+/// his signature. This is useful, for example, for implementing a shared bank
+/// account on which transactions can only go though with the approval of every
+/// owner.
 pub trait MultisigScheme {
     type Multisig: Default;
     type PublicKey;
