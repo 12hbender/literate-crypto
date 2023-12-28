@@ -9,8 +9,10 @@ use {
         Fortuna,
         MultiSchnorr,
         MultisigScheme,
+        RingScheme,
         Schnorr,
         SchnorrRandomness,
+        SchnorrSag,
         SchnorrSignature,
         Secp256k1,
         Sha256,
@@ -175,6 +177,21 @@ fn multi_schnorr_invalid_sig() {
     .unwrap();
 
     assert!(schnorr.verify(&[pubkey1, pubkey2], &data, &sig).is_err());
+}
+
+#[test]
+fn sag_valid() {
+    let privkey = rand_privkey();
+    let decoy1 = rand_pubkey();
+    let decoy2 = rand_pubkey();
+    let msg = (0u8..100).collect_vec();
+    let mut sag = SchnorrSag::new(
+        Secp256k1::default(),
+        Sha256::default(),
+        Fortuna::new(NoEntropy, Aes256::default(), Sha256::default()).unwrap(),
+    );
+    let sig = sag.sign(privkey, &[decoy1, decoy2], &msg);
+    assert!(sag.verify(&msg, &sig).is_ok());
 }
 
 fn ecdsa_setup() -> EcdsaSetup {

@@ -9,10 +9,13 @@ pub use ecc::{
     MultiSchnorr,
     Schnorr,
     SchnorrRandomness,
+    SchnorrSag,
+    SchnorrSagSignature,
     SchnorrSignature,
     Secp256k1,
 };
 
+// TODO Probably split these interfaces into different modules
 // TODO Also do Pedersen commitments
 
 /// A signature scheme is a method by which an actor proves that he generated a
@@ -76,6 +79,21 @@ pub trait MultisigScheme {
         msg: &[u8],
         sig: &Self::Multisig,
     ) -> Result<(), InvalidSignature>;
+}
+
+pub trait RingScheme {
+    type RingSignature;
+    type PublicKey;
+    type PrivateKey;
+
+    fn sign(
+        &mut self,
+        key: Self::PrivateKey,
+        decoys: &[Self::PublicKey],
+        msg: &[u8],
+    ) -> Self::RingSignature;
+
+    fn verify(&mut self, msg: &[u8], sig: &Self::RingSignature) -> Result<(), InvalidSignature>;
 }
 
 /// Error indicating that a signature is invalid.

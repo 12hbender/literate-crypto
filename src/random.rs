@@ -45,3 +45,17 @@ pub fn uniform_random(rand: &mut impl Iterator<Item = u8>, range: Range<u32>) ->
         + u64::from(range.end - range.start) * u64::from(draw) / u64::from(u32::MAX);
     result.try_into().unwrap()
 }
+
+/// Randomly shuffle the elements of a slice.
+///
+/// This works by walking the slice and swapping the current element with a
+/// random element picked from the remainder of the slice to the right. This is
+/// equivalent to randomly removing elements from the slice and pushing them
+/// into an empty container, but more efficient since it operates in-place.
+pub fn shuffle<T>(rand: &mut impl Iterator<Item = u8>, elems: &mut [T]) {
+    let len = u32::try_from(elems.len()).unwrap();
+    for i in 0..len - 1 {
+        let j = uniform_random(rand, i + 1..len);
+        elems.swap(i.try_into().unwrap(), j.try_into().unwrap());
+    }
+}

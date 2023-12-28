@@ -6,5 +6,5 @@ mod fortuna;
 mod hash;
 mod hmac;
 mod padding;
+mod random;
 mod secp256k1;
-mod uniformrandom;

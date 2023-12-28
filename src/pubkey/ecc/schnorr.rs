@@ -12,8 +12,12 @@ use {
 };
 
 mod multisig;
+mod sag;
 
-pub use multisig::{MultiSchnorr, SchnorrRandomness};
+pub use {
+    multisig::{MultiSchnorr, SchnorrRandomness},
+    sag::{SchnorrSag, SchnorrSagSignature},
+};
 
 // TODO I need a separate place to document the ecdlp assumption, maybe in the
 // ecc module

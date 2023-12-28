@@ -1,6 +1,6 @@
 use {
     super::fortuna::NoEntropy,
-    crate::{uniform_random, Aes256, Fortuna, Sha256},
+    crate::{shuffle, uniform_random, util::CollectVec, Aes256, Fortuna, Sha256},
     std::{collections::HashSet, ops::Range},
 };
 
@@ -23,6 +23,26 @@ fn random_empty_range_returns_zero() {
     let mut iter = rng.into_iter();
     let draw = uniform_random(&mut iter, 0..0);
     assert_eq!(draw, 0);
+}
+
+/// Assert that shuffling a slice contains the exact same elements, but in a
+/// different order.
+#[test]
+fn random_shuffle() {
+    let rng = Fortuna::new(NoEntropy, Aes256::default(), Sha256::default()).unwrap();
+    let mut iter = rng.into_iter();
+
+    let original = (0..100).collect_vec();
+    let mut shuffled = original.clone();
+
+    shuffle(&mut iter, &mut shuffled);
+
+    // The chance that the order is not changed after shuffling is negligible.
+    assert_ne!(original, shuffled);
+
+    // The slices should still contain the same elements.
+    assert!(original.iter().all(|x| shuffled.contains(x)));
+    assert!(shuffled.iter().all(|x| original.contains(x)));
 }
 
 fn test_range(iter: &mut impl Iterator<Item = u8>, range: Range<u32>) {
