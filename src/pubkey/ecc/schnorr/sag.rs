@@ -164,12 +164,25 @@ where
     }
 }
 
-// TODO This should enforce invariants: r and keys are nonempty with same length
 #[derive(Debug)]
 pub struct SchnorrSagSignature<C> {
-    pub c: Num,
-    pub r: Vec<Num>,
-    pub keys: Vec<PublicKey<C>>,
+    c: Num,
+    r: Vec<Num>,
+    keys: Vec<PublicKey<C>>,
+}
+
+impl<C> SchnorrSagSignature<C> {
+    pub fn c(&self) -> Num {
+        self.c
+    }
+
+    pub fn r(&self) -> &[Num] {
+        &self.r
+    }
+
+    pub fn keys(&self) -> &[PublicKey<C>] {
+        &self.keys
+    }
 }
 
 /// Encode multiple pubkeys into a unique binary representation.
