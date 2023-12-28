@@ -7,3 +7,4 @@ mod hash;
 mod hmac;
 mod padding;
 mod secp256k1;
+mod uniformrandom;

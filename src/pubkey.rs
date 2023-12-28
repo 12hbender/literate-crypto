@@ -13,6 +13,8 @@ pub use ecc::{
     Secp256k1,
 };
 
+// TODO Also do Pedersen commitments
+
 /// A signature scheme is a method by which an actor proves that he generated a
 /// message.
 ///

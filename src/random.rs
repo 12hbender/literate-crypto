@@ -1,5 +1,7 @@
 mod fortuna;
 
+use std::ops::Range;
+
 pub use fortuna::Fortuna;
 
 /// Cryptographically secure pseudorandom number generator.
@@ -26,4 +28,20 @@ pub trait Csprng: IntoIterator<Item = u8> {}
 pub trait Entropy {
     /// Fetch some random bytes from the entropy source.
     fn get(&mut self, buf: &mut [u8]);
+}
+
+/// Draw a uniformly random number from a range.
+///
+/// Being uniformly random means that every number in the range has equal chance
+/// of being drawn, except negligible difference.
+pub fn uniform_random(rand: &mut impl Iterator<Item = u8>, range: Range<u32>) -> u32 {
+    let draw = u32::from_le_bytes([
+        rand.next().unwrap(),
+        rand.next().unwrap(),
+        rand.next().unwrap(),
+        rand.next().unwrap(),
+    ]);
+    let result = u64::from(range.start)
+        + u64::from(range.end - range.start) * u64::from(draw) / u64::from(u32::MAX);
+    result.try_into().unwrap()
 }

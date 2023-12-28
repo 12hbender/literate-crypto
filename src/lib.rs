@@ -90,5 +90,5 @@ pub use {
         Secp256k1,
         SignatureScheme,
     },
-    random::{Csprng, Entropy, Fortuna},
+    random::{uniform_random, Csprng, Entropy, Fortuna},
 };
