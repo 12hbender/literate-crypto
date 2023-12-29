@@ -8,11 +8,76 @@ use {
         InvalidSignature,
         RingScheme,
     },
+    docext::docext,
     std::array,
 };
 
-// TODO There's no need to contain Schnorr here, it's not used and can't be used
-// in a meaningful way
+/// Spontaneous anonymous group signatures.
+///
+/// This is a [ring signature scheme](crate::RingScheme) inspired by [Schnorr
+/// signatures](crate::Schnorr). Given a randomly selected list of decoy pubkeys
+/// $P_1, P_2, \dots, P_{n-1}$ and the real private key $p_n$ with the
+/// corresponding pubkey $P_n$, the scheme results in a signature which can be
+/// verified to have been signed by one of the private keys corresponding to
+/// $P_1, P_2, \dots, P_n$ without knowing which private key was actually used.
+///
+/// Scalars $r_1, r_2, \dots, r_{n-1}$ and $\alpha$ are selected
+/// randomly. The series of challenges $c_i$ starts with
+///
+/// $$
+/// c_1 = H(\langle L \rangle, m, \alpha G)
+/// $$
+///
+/// where $H$ is a [hash function](crate::Hash), $\langle L \rangle$ is a unique
+/// encoding  of the pubkeys $(P_1, P_2, \dots, P_n)$, $m$ is the message to be
+/// signed, and $G$ is the [elliptic curve generator
+/// point](crate::ecc::Curve::g).
+///
+/// The remaining values $c_2, c_3, \dots, c_n$ are calculated as
+///
+/// $$
+/// c_{i+1} = H(\langle L \rangle, m, r_iG + c_iP_i)
+/// $$
+///
+/// Finally, set $r_n = \alpha - c_np_n$ so that the ring is closed:
+///
+/// $$
+/// r_n = \alpha - c_np_n \implies \alpha = r_n + c_np_n \\
+/// c_1 = H(\langle L \rangle, m, \alpha G) \\
+/// c_1 = H(\langle L \rangle, m, (r_n + c_np_n) G) \\
+/// c_1 = H(\langle L \rangle, m, r_nG + c_nP_n)
+/// $$
+///
+/// Which corresponds to the formula $c_{i+1} = H(\langle L \rangle, m, r_iG +
+/// c_iK_i)$ for all consecutive values of $i$, where $i = n+1$ is replaced with
+/// $i = 1$.
+///
+/// Finally, pick a random number $q$ and rotate all of the sequences $r_1, r_2,
+/// \dots, r_n$, $c_1, c_2, \dots, c_n$ and $P_1, P_2, \dots, P_n$ by $q$ so
+/// that
+///
+/// $$
+/// r_i \gets r_{i + q} \\
+/// c_i \gets c_{i + q} \\
+/// P_i \gets P_{i + q}
+/// $$
+///
+/// The resulting signature is $(c1, r_1, r_2, \dots, r_n, P_1, P_2, \dots,
+/// P_n)$. The rotation by $q$ is necessary since otherwise $P_n$ would always
+/// correspond to the true signer of the message, and his identity would not be
+/// concealed at all.
+///
+/// To verify the signature, simply check that it forms a ring:
+///
+/// $$
+/// c_{i+1} \stackrel{?}{=} H(\langle L \rangle, m, r_iG + c_iK_i)
+/// $$
+///
+/// where $i = n + 1$ is replaced with $i = 1$.
+///
+/// The scheme works because it's impossible to form a ring without knowing one
+/// private key, while it is unnecessary to know any of the other private keys.
+#[docext]
 pub struct SchnorrSag<C, H, R: Csprng> {
     _curve: C,
     hash: H,

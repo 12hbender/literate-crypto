@@ -2,6 +2,7 @@ use std::fmt;
 
 pub mod ecc;
 
+use docext::docext;
 pub use ecc::{
     Ecdsa,
     EcdsaSignature,
@@ -55,8 +56,9 @@ pub trait SignatureScheme {
     ) -> Result<(), InvalidSignature>;
 }
 
-/// A multisig scheme is similar to a [regular signature], except that it is
-/// signed by multiple private keys and verified with multiple public keys.
+/// A multisig scheme is similar to a [regular signature](SignatureScheme),
+/// except that it is signed by multiple private keys and verified with multiple
+/// public keys.
 ///
 /// A multisig scheme allows multiple actors to collaboratively sign a message,
 /// and allows any verifier to reject the message unless every actor contributed
@@ -81,6 +83,22 @@ pub trait MultisigScheme {
     ) -> Result<(), InvalidSignature>;
 }
 
+/// Ring signature scheme.
+///
+/// Given randomly selected _decoy pubkeys_ $P_1, P_2, \dots, P_{n-1}$ and a
+/// real private key $p_n$ with the corresponding pubkey $P_n$, a ring signature
+/// can be verified to have been singed by a private key corresponding to one of
+/// $P_1, P_2, \dots, P_n$ without knowing which private key was actually used.
+///
+/// This allows an actor to make a signature on behalf of a group, effectively
+/// proving that _somebody_ from that group is making a statement without
+/// revealing who it is.
+///
+/// For example, a disgruntled employee can blow a whistle on his company, using
+/// a ring signature which includes all employee pubkeys as decoys. This way he
+/// can prove that the whistle is indeed coming from a company employee, without
+/// revealing his true identity.
+#[docext]
 pub trait RingScheme {
     type RingSignature;
     type PublicKey;
