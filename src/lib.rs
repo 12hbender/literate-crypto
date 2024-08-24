@@ -13,9 +13,19 @@
 //!     - [Fortuna]
 //! - [MAC](Mac)
 //!     - [HMAC](Hmac)
-//! - [Signature Scheme (Public Key Cryptography)](SignatureScheme)
+//! - [Signature Scheme (Public Key Cryptography)](SignatureScheme), [Multisig
+//!   Scheme](MultisigScheme)
 //!     - [Elliptic Curve Math](ecc::Curve)
 //!         - [ECDSA](Ecdsa)
+//!         - [Schnorr Signature](Schnorr)
+//!         - [Schnorr Multisig](MultiSchnorr)
+
+// TODO For threshold Schnorr signatures:
+// FROST: Flexible Round-Optimized Schnorr Threshold Signatures (https://eprint.iacr.org/2020/852.pdf)
+// I think this is the state of the art
+// Also worth reading for introduction is
+// Fully Adaptive Schnorr Threshold Signatures (https://eprint.iacr.org/2023/445.pdf) - in
+// particular the chapter on Sparkle+ should be somewhat enlightening
 
 #![forbid(unsafe_code)]
 #![feature(return_position_impl_trait_in_trait)]

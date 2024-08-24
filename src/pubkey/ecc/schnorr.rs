@@ -29,13 +29,13 @@ pub use {
 /// the [generator point](crate::ecc::Curve::g) of the underlying [elliptic
 /// curve](crate::ecc::Curve), and $N$ is the [order of the generator
 /// point](crate::ecc::Curve::N). Then the message is [hashed](crate::Hash)
-/// along with $R$ using some hash function $H$, yielding $e = H(R \parallel
-/// m)$. Finally, $s = r - ep$, where $p$ is the private key. The resulting
-/// signature is the pair $(s, e)$.
+/// along with $R$ and the public key $P = pG$ using some hash function $H$,
+/// yielding $e = H(P \parallel R \parallel m)$. Finally, $s = r - ep$, where
+/// $p$ is the private key. The resulting signature is the pair $(s, e)$.
 ///
-/// To verify the message $m$ given the signature $(s, e)$, calculate $R = sG +
-/// eP$, where $P = pG$ is the public key corresponding to the private key $p$,
-/// and check that $H(R \parallel m) = e$. This works because
+/// To verify the message $m$ given the signature $(s, e)$, calculate $R
+/// = sG + eP$ and check that $H(P \parallel R \parallel m)
+/// \stackrel{?}{=} e$. This works because
 ///
 /// $$
 /// R = sG + eP \\
@@ -44,7 +44,20 @@ pub use {
 /// R = rG
 /// $$
 ///
-/// which is the original definition of $R$ from the signing procedure.
+/// which is the original definition of $R$ from the signing procedure. The
+/// algorithm is secure because it's impossible to derive $p$ from $s = r -
+/// ep$ without knowing $r$, which is never revealed.
+///
+/// There are two reasons why $e$ is calculated as $e = H(P \parallel R
+/// \parallel m)$:
+///
+/// 1. $R$ is included in the hash because it is random, so the resulting $e$ is
+///    also random.
+/// 2. $m$ and $P$ are included in the hash in order to _bind_ the resulting
+///    signature to the given message and public key. $P$ is not strictly
+///    necessary, since it would not be possible to verify the signature with an
+///    incorrect private key anyway. The algorithm remains secure even if $P$ is
+///    omitted.
 #[docext]
 pub struct Schnorr<C, H, R: Csprng> {
     _curve: C,

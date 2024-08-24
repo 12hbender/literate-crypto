@@ -16,20 +16,21 @@ use {
     std::marker::PhantomData,
 };
 
-// TODO link to simple approach
-/// A [multisig scheme](crate::Multisig) based on [Schnorr
+/// A [multisig scheme](crate::MultisigScheme) based on [Schnorr
 /// signatures](crate::Schnorr).
 ///
-/// Using Schnorr signatures has multiple advantages over the [simple approach
-/// to multisig](TODO). Most importantly, the resulting signature is
-/// indistinguishable from a regular Schnorr signature created by a single
-/// private key. Consequently, this scheme is also more efficient: the size of
-/// the signature is the same no matter the number of signers.
+/// Using Schnorr signatures has multiple advantages over the simple approach
+/// to multisig, where the signatures from each private key are concatenated.
+/// Most importantly, the resulting multisig is indistinguishable from a
+/// regular Schnorr signature created by a single private key. Consequently,
+/// this scheme is also more efficient: the size of the signature is the same no
+/// matter the number of signers.
 ///
-/// Before signing, $n$ signers with private keys $p_i$ and public keys $P_i$
-/// each pick [random secret numbers $r_i$](SchnorrRandomness). They share the
-/// public counterparts of the secret numbers $R_i = r_iG$, where $G$ is the
-/// [generator point](crate::ecc::Curve::g) of the underlying [elliptic
+/// Before signing, $n$ signers with private keys $p_i$ and public keys $P_i =
+/// p_iG$ each pick random secret numbers $r_i$ in a [secure collaborative
+/// manner](SchnorrRandomness). They share the public counterparts of the secret
+/// numbers $R_i = r_iG$, where $G$ is the [generator
+/// point](crate::ecc::Curve::g) of the underlying [elliptic
 /// curve](crate::ecc::Curve), and calculate $R = \sum_{i=1}^{n} R_i$.
 ///
 /// They start with $s = 0$. When it's $p_i$'s turn to sign, s is updated as
@@ -55,13 +56,14 @@ use {
 /// The resulting signature is $(s, e)$ where $e = H_{sig}(\tilde P \parallel R
 /// \parallel m)$.
 ///
-/// A [regular Schnorr signature](crate::Schnorr) $(s, e)$ is verified using the
-/// following formula, where $e$ is the hash $H(P \parallel R \parallel m)$ and
-/// $P$ is the public key:
+/// A [regular Schnorr signature](crate::Schnorr) $(s, e)$ is verified using
+/// the following formula, where $e$ is the hash $H(P \parallel R
+/// \parallel m)$ and $P$ is the public key:
 ///
 /// $$
 /// R = sG + eP \\
-/// R = sG + H(P \parallel R \parallel m)P
+/// R = sG + H(P \parallel R \parallel m)P \\
+/// H(P \parallel R \parallel m) \stackrel{?}{=} e
 /// $$
 ///
 /// A Schnorr multisig is verified the exact same way, using $\tilde P$ as the
@@ -69,7 +71,8 @@ use {
 ///
 /// $$
 /// R = sG + e\tilde P \\
-/// R = sG + H_{sig}(\tilde P \parallel R \parallel m)\tilde P
+/// R = sG + H_{sig}(\tilde P \parallel R \parallel m)\tilde P \\
+/// H_{sig}(\tilde P \parallel R \parallel m) \stackrel{?}{=} e
 /// $$
 ///
 /// After every actor has signed, the signature $s$ will be $s = \sum_{i =
@@ -250,6 +253,8 @@ pub struct SchnorrRandomness<C> {
     _curve: PhantomData<C>,
 }
 
+// Explicit implementation because `derive` adds the requirement `C: Clone`,
+// which is unnecessary.
 impl<C> Clone for SchnorrRandomness<C> {
     fn clone(&self) -> Self {
         *self
