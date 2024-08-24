@@ -1,6 +1,7 @@
 mod aes;
 mod cbc;
 mod cipher;
+mod commitment;
 mod ctr;
 mod fortuna;
 mod hash;

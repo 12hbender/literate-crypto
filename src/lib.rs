@@ -41,6 +41,7 @@ mod test;
 pub mod doc;
 
 mod cipher;
+mod commitment;
 mod hash;
 mod mac;
 mod pubkey;
@@ -68,6 +69,7 @@ pub use {
         Padding,
         Pkcs7,
     },
+    commitment::{CommitmentScheme, HashCommitment, HashCommitmentScheme, InvalidReveal},
     hash::{
         sha2,
         sha3,
